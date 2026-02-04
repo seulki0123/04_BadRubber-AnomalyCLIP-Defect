@@ -10,7 +10,8 @@ def generate_class_info(dataset_name):
     class_name_map_class_id = {}
     if dataset_name == 'mvtec':
         obj_list = ['carpet', 'bottle', 'hazelnut', 'leather', 'cable', 'capsule', 'grid', 'pill',
-                    'transistor', 'metal_nut', 'screw', 'toothbrush', 'zipper', 'tile', 'wood']
+                    'transistor', 'metal_nut', 'screw', 'toothbrush', 'zipper', 'tile', 'wood', 'F1038', 'F2150', 'M2520']
+        # obj_list = ['F1038', 'F2150', 'M2520']
     elif dataset_name == 'visa':
         obj_list = ['candle', 'capsules', 'cashew', 'chewinggum', 'fryum', 'macaroni1', 'macaroni2',
                     'pcb1', 'pcb2', 'pcb3', 'pcb4', 'pipe_fryum']

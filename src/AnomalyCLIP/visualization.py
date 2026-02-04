@@ -1,6 +1,6 @@
 import cv2
 import os
-from utils import normalize
+from .utils import normalize
 import numpy as np
 
 def visualizer(pathes, anomaly_map, img_size, save_path, cls_name):

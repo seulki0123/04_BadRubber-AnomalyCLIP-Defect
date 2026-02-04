@@ -1,1 +1,12 @@
 datasets/
+venv*
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+checkpoints/
+results/
+
+NAS/
+nas.sh
