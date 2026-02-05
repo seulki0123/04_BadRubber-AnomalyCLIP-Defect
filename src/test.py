@@ -73,14 +73,14 @@ def run(src_dir, dst_dir, anomalyclip_weights, segmentation_weights, classificat
     
 if __name__ == "__main__":
 
-    date = "2026-01-04"
-    grade = "M2520"
+    date = "2026-01-07"
+    grade = "F1038"
     src_dir = f"./NAS/백업/LG_Chemistry_Site/SSBR/{date}"
-    dst_dir = f"./NAS/defect/classify/datasets/raw/{grade}/{date}"
+    dst_dir = f"./NAS/defect2/classify/datasets/raw/{grade}/{date}"
 
-    anomalyclip_weights = "./NAS/defect/anomaly/weights/SSBR/9_12_4_mvtec+F1038-F2150-M2520/epoch_15.pth"
-    segmentation_weights = "./NAS/defect/segment/weights/rmbg/SSBR_F2150-M2520-F1038/weights/best.pt"
-    classification_weights = "./NAS/defect/classify/weights/SSBR/F2150/weights/best.pt"
+    anomalyclip_weights = "./NAS/defect2/anomaly/weights/SSBR/9_12_4_mvtec+F1038-F2150-M2520/epoch_15.pth"
+    segmentation_weights = "./NAS/defect2/segment/weights/rmbg/SSBR_F2150-M2520-F1038/weights/best.pt"
+    classification_weights = "./NAS/defect2/classify/weights/SSBR/F1038/weights/best.pt"
 
     run(
         src_dir=src_dir,
@@ -88,7 +88,7 @@ if __name__ == "__main__":
         anomalyclip_weights=anomalyclip_weights,
         segmentation_weights=segmentation_weights,
         classification_weights=classification_weights,
-        save_anomaly_map=True,
+        save_anomaly_map=False,
         save_segmentation=True,
-        save_crops=True,
+        save_crops=False,
     )
