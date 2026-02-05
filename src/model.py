@@ -1,14 +1,13 @@
 import os
-import time
-import shutil
-from types import SimpleNamespace
-
 import cv2
 import tqdm
+import time
 import torch
+import shutil
 import numpy as np
 from PIL import Image
 from ultralytics import YOLO
+from types import SimpleNamespace
 from scipy.ndimage import gaussian_filter
 
 import draw
@@ -17,10 +16,7 @@ from AnomalyCLIP import AnomalyCLIP_lib, utils, prompt_ensemble
 
 class Model:
 
-    def __init__(
-        self, anomalyclip_weights, segmentation_weights, classification_weights, depth=9, n_ctx=12, t_n_ctx=4, image_size=518, features_list=[6, 12, 18, 24], feature_map_layer=[0, 1, 2, 3], sigma=4, DPAM_layer=20,
-        save_anomaly_map=False, save_segmentation=False, save_crops=False,
-    ):
+    def __init__(self, anomalyclip_weights, segmentation_weights, classification_weights, depth=9, n_ctx=12, t_n_ctx=4, image_size=518, features_list=[6, 12, 18, 24], feature_map_layer=[0, 1, 2, 3], sigma=4, DPAM_layer=20):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.depth = depth
         self.n_ctx = n_ctx
@@ -30,7 +26,6 @@ class Model:
         self.feature_map_layer = feature_map_layer
         self.sigma = sigma
         self.DPAM_layer = DPAM_layer
-
 
         self.anomalyclip_weights = anomalyclip_weights
         self.segmentation_weights = segmentation_weights
@@ -43,10 +38,6 @@ class Model:
             self.text_features,
             self.preprocess,
         ) = self._load()
-
-        self.save_anomaly_map = save_anomaly_map
-        self.save_segmentation = save_segmentation
-        self.save_crops = save_crops
 
     def _load(self):
 
@@ -73,8 +64,8 @@ class Model:
         segmentation_model = YOLO(self.segmentation_weights)
         classification_model = YOLO(self.classification_weights)
         print(classification_model.names)
-        self.classification_model_names = {0: 'crack', 1: 'pressed', 2: 'trash', 3: 'wet', 4: 'other_rubber', 5: 'trash', 6: 'trash', 7: 'powder', 8: 'trash'}
-        print(self.classification_model_names)
+        self.classification_model_names = {0: 'crack', 1: 'pressed', 2: 'trash', 3: 'wet', 4: 'other_rubber', 5: 'trash', 6: 'trash', 7: 'powder', 8: 'trash', 9: 'trash', 10: 'trash'}
+        input(self.classification_model_names)
 
         return anomalyclip_model, segmentation_model, classification_model, text_features, preprocess
 
@@ -105,14 +96,9 @@ class Model:
         save_dir=None
     ):
         img = Image.open(image_path)
-        
+
         torch.cuda.synchronize()
         t0 = time.time()
-
-        img_np = np.array(img)            # (H,W,3), uint8
-        img_np = cv2.resize(img_np, (self.image_size, self.image_size))
-        img_np = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
-
 
         img_320 = img.copy().resize((320, 320), resample=Image.BILINEAR)
         img = self.preprocess(img)
@@ -120,7 +106,7 @@ class Model:
         print("img", img.shape)
         image = img.reshape(1, 3, self.image_size, self.image_size).to(self.device)
 
-        ### AnomalyCLIP: Anomaly Map
+        # AnomalyCLIP
         with torch.no_grad():
             image_features, patch_features = self.anomalyclip_model.encode_image(image, self.features_list, DPAM_layer = self.DPAM_layer)
             image_features = image_features / image_features.norm(dim=-1, keepdim=True)
@@ -143,7 +129,7 @@ class Model:
         
             anomaly_map = torch.stack([torch.from_numpy(gaussian_filter(i, sigma = self.sigma)) for i in anomaly_map.detach().cpu()], dim = 0 )
 
-        ### Segmentation: Remove Background
+        # YOLOv11 Segmentation
         seg_results = self.segmentation_model(img_320, verbose=False)
         r = seg_results[0]
 
@@ -158,81 +144,88 @@ class Model:
             )
             yolo_mask = mask  # (H, W), {0,1}
 
-        ### Classifiation: Classify Defects
-        anomaly_map = anomaly_map.detach().cpu().numpy()
-        anomaly_mask = s1k2_utils.get_segmentation_mask(anomaly_map, threshold=0.5)
+        dt = time.time() - t0
+        print(f"Prediction time: {dt*1000} ms")
+
+        # Draw
+        if save_dir is not None:
+            return self.draw(image_path, anomaly_map.detach().cpu().numpy(), save_dir, yolo_mask)
+
+    def draw(self, image_path, anomaly_map, save_dir, yolo_mask):
+        filename = os.path.basename(image_path)
+        anomaly_map_dir = os.path.join(save_dir, 'anomaly_map')
+        segmentation_dir = os.path.join(save_dir, 'segmentation')
+        segmentation_meta_dir = os.path.join(save_dir, 'segmentation-meta')
+        crops_dir = os.path.join(save_dir, 'crops')
+        os.makedirs(anomaly_map_dir, exist_ok=True)
+        os.makedirs(segmentation_dir, exist_ok=True)
+        os.makedirs(segmentation_meta_dir, exist_ok=True)
+        os.makedirs(crops_dir, exist_ok=True)
+
+        # ### original
+        image = cv2.resize(cv2.imread(image_path), (self.image_size, self.image_size))
+        # shutil.copy(image_path, os.path.join(save_dir, f'{filename}_1_original.jpg'))
+
+        ### anomaly mask
+        # vis_anomaly_map = draw.draw_anomaly_map(image, anomaly_map)
+        # cv2.imwrite(os.path.join(anomaly_map_dir, f'{filename}_2_anomaly_map.jpg'), vis_anomaly_map)
+
+        ### anomaly mask && yolo mask
+        # 1. anomaly mask
+        anomaly_mask = draw.get_segmentation_mask(anomaly_map, threshold=0.5)
         anomaly_mask_bin = (anomaly_mask > 0).astype(np.uint8)
 
-        # anomaly ∧ yolo
+        # 2. anomaly ∧ yolo
         if yolo_mask is not None:
+            final_mask = anomaly_mask_bin & yolo_mask
             final_mask = anomaly_mask_bin & yolo_mask
         else:
             final_mask = anomaly_mask_bin
 
         final_mask = final_mask.astype(np.uint8) * 255
 
-        # get bboxes
-        bboxes = s1k2_utils.get_bboxes_from_mask(final_mask, min_area=300)
+        # 3. bbox는 반드시 final_mask에서
+        bboxes = draw.get_bboxes_from_mask(final_mask, min_area=300)
 
-        if len(bboxes) == 0:
-            cls_pairs = []
-        else:
-            crops = s1k2_utils.crop_bboxes(img_np, bboxes, scale=2.0)
-            cls_results = self.classification_model(crops, verbose=False)
+        ### crops
+        crops = draw.crop_bboxes(image, bboxes, scale=2.0)
 
-            cls_names = [self.classification_model_names[int(r.probs.top1)] for r in cls_results]
-            cls_confs = [float(r.probs.top1conf) for r in cls_results]
+        labels = []
+        confs = []
+        keep_indices = []  # trash 아닌 것만 유지
 
-            keep_idx = [i for i, name in enumerate(cls_names) if name != "trash"]
-            cls_pairs = [(cls_names[i], cls_confs[i], bboxes[i], crops[i]) for i in keep_idx]
+        for i, crop in enumerate(crops):
+            # ratio = s1k2_utils.black_pixel_ratio(crop)
+            # cv2.imwrite(os.path.join(crops_dir, f'{ratio:.2f}_{filename}_4_crop_{i}.jpg'), crop)
 
-        dt = time.time() - t0
-        print(f"Prediction time: {dt*1000} ms")
+            results = self.classification_model(crop, verbose=False)
+            r = results[0]
 
-        # Draw
-        if save_dir is not None:
-            return self.save_results(
-                filename=os.path.basename(image_path),
-                image=img_np,
-                anomaly_map=anomaly_map,
-                anomaly_mask=anomaly_mask,
-                yolo_mask=yolo_mask,
-                final_mask=final_mask,
-                cls_results=cls_pairs,
-                save_dir=save_dir,
-            )
+            class_number = int(r.probs.top1)
+            label = self.classification_model_names[class_number]
+            conf = float(r.probs.top1conf)
 
-    def save_results(self, filename, image, anomaly_map, anomaly_mask, yolo_mask, final_mask, cls_results, save_dir):
-        anomaly_map_dir = os.path.join(save_dir, 'anomaly_map')
-        segmentation_dir = os.path.join(save_dir, 'segmentation')
-        crops_dir = os.path.join(save_dir, 'crops')
-        meta_dir = os.path.join(save_dir, 'meta')
-        if self.save_anomaly_map: os.makedirs(anomaly_map_dir, exist_ok=True)
-        if self.save_segmentation: os.makedirs(segmentation_dir, exist_ok=True)
-        if self.save_crops: os.makedirs(crops_dir, exist_ok=True)
-        os.makedirs(meta_dir, exist_ok=True)
+            if label == "trash":
+                continue
 
-        ### anomaly mask
-        if self.save_anomaly_map:
-            vis_anomaly_map = draw.draw_anomaly_map(image, anomaly_map)
-            cv2.imwrite(os.path.join(anomaly_map_dir, f'{filename}_2_anomaly_map.jpg'), vis_anomaly_map)
+            if conf < 0.8:
+                continue
 
-        ### anomaly mask && yolo mask
-        if self.save_segmentation:
-            for i, (label, conf, bbox, crop) in enumerate(cls_results):
-                cv2.imwrite(os.path.join(crops_dir, f'{label}_{filename}_4_crop_{i}.jpg'), crop)
+            labels.append(label)
+            confs.append(conf)
+            keep_indices.append(i)
+
+        bboxes = [bboxes[i] for i in keep_indices]
 
         ### draw masks, bboxes
-        if self.save_segmentation:
-            vis_mask_anomaly = draw.draw_segmentation_outline(image, anomaly_mask, color=(0, 0, 255))
-            vis_mask_yolo = draw.draw_segmentation_outline(image, yolo_mask, color=(0, 255, 0)) if yolo_mask is not None else image.copy()
-            vis_mask_final = draw.draw_segmentation_outline(image, final_mask, color=(255, 0, 0))
-            vis_bbox = draw.draw_bboxes_with_labels(vis_mask_final, [bbox for _, _, bbox, _ in cls_results], [f"{label}: {conf:.2f}" for label, conf, _, _ in cls_results])
-            cv2.imwrite(os.path.join(segmentation_dir, f'{filename}_3_segmentation.jpg'), vis_bbox)
-        
-        ### save metadatas
-        if len(cls_results):
-            with open(os.path.join(meta_dir, f'{filename}_3_segmentation.txt'), 'w') as f:
-                f.write(",".join([i[0] for i in cls_results]))
+        # vis_mask_anomaly = draw.draw_segmentation_outline(image, anomaly_mask, color=(0, 0, 255))
+        # vis_mask_yolo = draw.draw_segmentation_outline(image, yolo_mask, color=(0, 255, 0)) if yolo_mask is not None else image.copy()
+        vis_mask_final = draw.draw_segmentation_outline(image, final_mask, color=(255, 0, 0))
+        vis_bbox = draw.draw_bboxes_with_labels(vis_mask_final, bboxes, [f"{labels[i]}: {confs[i]:.2f}" for i in range(len(labels))])
+        cv2.imwrite(os.path.join(segmentation_dir, f'{filename}_3_segmentation.jpg'), vis_bbox)
 
-        return [label for label, _, _, _ in cls_results]
+        if len(labels):
+            with open(os.path.join(segmentation_meta_dir, f'{filename}_3_segmentation.txt'), 'w') as f:
+                f.write(",".join(labels))
+
+        return labels

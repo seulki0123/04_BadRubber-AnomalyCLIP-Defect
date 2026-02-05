@@ -3,18 +3,21 @@ import tqdm
 import torch
 from model import Model
 
-def run(src_dir, dst_dir, anomalyclip_weights, segmentation_weights, classification_weights, image_size=518, save_anomaly_map=True, save_segmentation=True, save_crops=True):
+if __name__ == "__main__":
+
     model = Model(
-        anomalyclip_weights=anomalyclip_weights,
-        segmentation_weights=segmentation_weights,
-        classification_weights=classification_weights,
-        image_size=image_size,
-        save_anomaly_map=save_anomaly_map,
-        save_segmentation=save_segmentation,
-        save_crops=save_crops,
+        anomalyclip_weights = "./NAS/anomaly/weights/SSBR/9_12_4_mvtec+F1038-F2150-M2520/epoch_15.pth",
+        segmentation_weights = "./NAS/segment/weights/rmbg/SSBR_F2150-M2520-F1038/weights/best.pt",
+        classification_weights = "./NAS/classify/weights/SSBR/F1038/weights/best.pt",
+        image_size=518,
     )
     
     model.warmup()
+
+    date = "2026-01-13"
+    grade = "F1038"
+    src_dir = f"./NAS_Site_SSBR/SSBR/{date}"
+    dst_dir = f"./NAS/_report/{grade}/{date}"
 
     TotalEA = 0
 
@@ -44,6 +47,9 @@ def run(src_dir, dst_dir, anomalyclip_weights, segmentation_weights, classificat
         if not image.endswith(".jpg"):
             continue
 
+        if not "SSBR_1_" in image:
+            continue
+
         image_path = os.path.join(src_dir, image)
         labels = model.pred(
             image_path=image_path,
@@ -66,29 +72,7 @@ def run(src_dir, dst_dir, anomalyclip_weights, segmentation_weights, classificat
         for label in labels:
             Class검출수[label] = Class검출수.get(label, 0) + 1
 
-        if idx % 100 == 0 or idx == len(os.listdir(src_dir)) - 1:
+        if idx % 100 == 0:
             pinrt2()
 
         idx += 1
-    
-if __name__ == "__main__":
-
-    date = "2026-01-07"
-    grade = "F1038"
-    src_dir = f"./NAS/백업/LG_Chemistry_Site/SSBR/{date}"
-    dst_dir = f"./NAS/defect2/classify/datasets/raw/{grade}/{date}"
-
-    anomalyclip_weights = "./NAS/defect2/anomaly/weights/SSBR/9_12_4_mvtec+F1038-F2150-M2520/epoch_15.pth"
-    segmentation_weights = "./NAS/defect2/segment/weights/rmbg/SSBR_F2150-M2520-F1038/weights/best.pt"
-    classification_weights = "./NAS/defect2/classify/weights/SSBR/F1038/weights/best.pt"
-
-    run(
-        src_dir=src_dir,
-        dst_dir=dst_dir,
-        anomalyclip_weights=anomalyclip_weights,
-        segmentation_weights=segmentation_weights,
-        classification_weights=classification_weights,
-        save_anomaly_map=False,
-        save_segmentation=True,
-        save_crops=False,
-    )
