@@ -64,7 +64,7 @@ class Model:
         segmentation_model = YOLO(self.segmentation_weights)
         classification_model = YOLO(self.classification_weights)
         print(classification_model.names)
-        self.classification_model_names = {0: 'crack', 1: 'pressed', 2: 'trash', 3: 'wet', 4: 'other_rubber', 5: 'trash', 6: 'trash', 7: 'powder', 8: 'trash', 9: 'trash', 10: 'trash'}
+        self.classification_model_names = {0: 'crack', 1: 'pressed', 2: 'trash', 3: 'wet', 4: 'other_rubber', 5: 'trash', 6: 'trash', 7: 'powder', 8: 'trash', 9: 'trash', 10: 'trash', 11: 'wet', 12: 'trash'}
         input(self.classification_model_names)
 
         return anomalyclip_model, segmentation_model, classification_model, text_features, preprocess
