@@ -13,7 +13,7 @@ if __name__ == "__main__":
     )
     
     grade = "ForClassification"
-    for date in ['2025-11-27', '2025-12-04','2025-12-24', '2025-12-25','2025-12-30','2026-01-05', '2026-01-06', '2026-01-12', '2026-01-13', '2026-01-17', '2026-01-18', '2026-01-23','2026-01-24','2026-01-30','2026-02-04', '2026-02-05' ]:
+    for date in ['2026-01-13', '2026-01-17', '2026-01-18', '2026-01-23' ]:
 
         TotalEA = 0
 
@@ -38,7 +38,12 @@ if __name__ == "__main__":
             print("-"*100, "\n")
 
         model.warmup()
-        for cam in [""]:
+        if date in ["2026-01-30", "2026-02-04", "2026-02-05"]:
+            cam_list = ["CAM1", "CAM2", "CAM3"]
+        else:
+            cam_list = [""]
+
+        for cam in cam_list:
 
             src_dir = f"\\\\gnict_nas\\LG_Chemistry_Site\\SSBR\\{date}\\{cam}"
             dst_dir = f"\\\\gnict_nas\\LG_Chemistry_S1K2\\defect\\_report\\SSBR\\{grade}\\{date}\\{cam}"
