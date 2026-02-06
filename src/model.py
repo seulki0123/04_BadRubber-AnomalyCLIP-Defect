@@ -190,9 +190,13 @@ class Model:
         ### crops
         crops = draw.crop_bboxes(image, bboxes, scale=2.0)
 
-        labels = []
-        confs = []
-        keep_indices = []  # trash 아닌 것만 유지
+        labels_NG = []
+        confs_NG = []
+        keep_indices_NG = []  # trash 아닌 것만 유지
+
+        labels_OK = []
+        confs_OK = []
+        keep_indices_OK = []  # trash 아닌 것만 유지
 
         for i, crop in enumerate(crops):
             # ratio = s1k2_utils.black_pixel_ratio(crop)
@@ -209,23 +213,27 @@ class Model:
                 continue
 
             if conf < 0.8:
-                continue
+                labels_OK.append(label)
+                confs_OK.append(conf)
+                keep_indices_OK.append(i)
+            else:
+                labels_NG.append(label)
+                confs_NG.append(conf)
+                keep_indices_NG.append(i)
 
-            labels.append(label)
-            confs.append(conf)
-            keep_indices.append(i)
-
-        bboxes = [bboxes[i] for i in keep_indices]
+        bboxes_OK = [bboxes[i] for i in keep_indices_OK]
+        bboxes_NG = [bboxes[i] for i in keep_indices_NG]
 
         ### draw masks, bboxes
         # vis_mask_anomaly = draw.draw_segmentation_outline(image, anomaly_mask, color=(0, 0, 255))
         # vis_mask_yolo = draw.draw_segmentation_outline(image, yolo_mask, color=(0, 255, 0)) if yolo_mask is not None else image.copy()
         vis_mask_final = draw.draw_segmentation_outline(image, final_mask, color=(255, 0, 0))
-        vis_bbox = draw.draw_bboxes_with_labels(vis_mask_final, bboxes, [f"{labels[i]}: {confs[i]:.2f}" for i in range(len(labels))])
-        cv2.imwrite(os.path.join(segmentation_dir, f'{filename}_3_segmentation.jpg'), vis_bbox)
+        vis_bbox_OK = draw.draw_bboxes_with_labels(vis_mask_final, bboxes_OK, [f"{labels_OK[i]}: {confs_OK[i]:.2f}" for i in range(len(labels_OK))])
+        vis_bbox_NG = draw.draw_bboxes_with_labels(vis_bbox_OK, bboxes_NG, [f"{labels_NG[i]}: {confs_NG[i]:.2f}" for i in range(len(labels_NG))], color=(255, 0, 0))
+        cv2.imwrite(os.path.join(segmentation_dir, f'{filename}_3_segmentation.jpg'), vis_bbox_NG)
 
-        if len(labels):
+        if len(labels_NG):
             with open(os.path.join(segmentation_meta_dir, f'{filename}_3_segmentation.txt'), 'w') as f:
-                f.write(",".join(labels))
+                f.write(",".join(labels_NG))
 
-        return labels
+        return labels_NG
