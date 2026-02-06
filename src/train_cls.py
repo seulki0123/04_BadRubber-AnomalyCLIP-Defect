@@ -7,9 +7,9 @@ from ultralytics.data.split import split_classify_dataset
 def main():
     model = YOLO("yolo11n-cls.pt")
     results = model.train(
-        data="./NAS/defect2/classify/datasets/annotations/SSBR/F1038/02",
-        project="./NAS/defect2/classify/weights/SSBR",
-        name="F1038",
+        data="\\\\gnict_nas\\LG_Chemistry_S1K2\\defect\\classify\\datasets\\annotations\\SSBR\\2550H\\01+02",
+        project="\\\\gnict_nas\\LG_Chemistry_S1K2\\defect\\classify\\weights\\SSBR",
+        name="2550H",
         epochs=30,
         imgsz=224,
         workers=8,
