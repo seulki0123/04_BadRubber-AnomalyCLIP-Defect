@@ -1,17 +1,20 @@
-import AnomalyCLIP_lib
-import torch
+import os
+import random
 import argparse
+
+import torch
 import torch.nn.functional as F
+import numpy as np
+from tqdm import tqdm
+
+import AnomalyCLIP_lib
 from prompt_ensemble import AnomalyCLIP_PromptLearner
 from loss import FocalLoss, BinaryDiceLoss
 from utils import normalize
 from dataset import Dataset
 from logger import get_logger
-from tqdm import tqdm
-import numpy as np
-import os
-import random
 from utils import get_transform
+
 def setup_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
