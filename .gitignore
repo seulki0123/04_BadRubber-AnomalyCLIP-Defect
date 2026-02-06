@@ -7,11 +7,7 @@ __pycache__/
 
 checkpoints/
 results/
+tests/
 
 NAS*
-nas.sh
-nas2.sh
-nas3.sh
-
-
-tests
+nas*.sh
