@@ -1,6 +1,6 @@
 import cv2
 from anomalyclip import AnomalyCLIPInference
-from anomalyclip.inference import visualize
+from anomalyclip.utils import visualize
 
 if __name__ == "__main__":
 
