@@ -14,26 +14,31 @@ class AnomalyInspector:
         anomalyclip_checkpoint_path: str,
         bgremover_checkpoint_path: str,
         classifier_checkpoint_path: str,
-        imgsz: int = 32 * 8,
+        anomalyclip_imgsz: int = 32 * 8,
+        bgremover_imgsz: int = 32 * 5,
+        classifier_imgsz: int = 32,
+        anomaly_threshold: float = 0.25,
+        anomaly_min_area: int = 112,
+        classifier_conf_threshold: float = 0.5,
     ):
-        self.imgsz = imgsz
+        self.imgsz = anomalyclip_imgsz
 
         self.inferencer = AnomalyCLIPInference(
             checkpoint_path=anomalyclip_checkpoint_path,
-            imgsz=imgsz,
+            imgsz=anomalyclip_imgsz,
         )
 
         self.bgremover = BackgroundRemover(
             checkpoint_path=bgremover_checkpoint_path,
-            imgsz=32 * 5,
+            imgsz=bgremover_imgsz,
         )
 
         self.classifier = Classifier(
             checkpoint_path=classifier_checkpoint_path,
-            anomaly_threshold=0.25,
-            conf_threshold=0.5,
-            min_area=112,
-            imgsz=32,
+            anomaly_threshold=anomaly_threshold,
+            min_area=anomaly_min_area,
+            conf_threshold=classifier_conf_threshold,
+            imgsz=classifier_imgsz,
         )
 
     def inspect(self, imgs_path: List[str], verbose: bool = True) -> List[Dict[str, Any]]:
