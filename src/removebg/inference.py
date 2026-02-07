@@ -1,17 +1,26 @@
+from typing import Sequence
 import numpy as np
 from ultralytics import YOLO
 
+
 class BackgroundRemover:
-    def __init__(self, checkpoint_path, imgsz):
+    def __init__(self, checkpoint_path: str, imgsz: int) -> None:
         self.model = YOLO(checkpoint_path)
         self.imgsz = imgsz
 
-    def remove(self, image, verbose=True):
+    def remove(
+        self,
+        image: Sequence[np.ndarray],
+        verbose: bool = True,
+    ) -> np.ndarray:
         results = self.model(image, imgsz=self.imgsz, verbose=verbose)
         return self.yolo_results_to_masks(results, self.imgsz)
 
     @staticmethod
-    def yolo_results_to_masks(results, imgsz):
+    def yolo_results_to_masks(
+        results,
+        imgsz: int,
+    ) -> np.ndarray:
         masks = []
 
         for r in results:

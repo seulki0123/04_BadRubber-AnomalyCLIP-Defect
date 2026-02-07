@@ -1,33 +1,38 @@
-import os
 import time
-import random
+from typing import List, Tuple, Sequence, Optional, Union
 
 import cv2
 import torch
 import numpy as np
 from PIL import Image
 from scipy.ndimage import gaussian_filter
-
 from argparse import Namespace
+
 from anomalyclip import AnomalyCLIP_lib
 from anomalyclip.utils import get_transform, setup_seed
 from anomalyclip.prompt_ensemble import AnomalyCLIP_PromptLearner
 
 
+ImageNP = np.ndarray  # (H, W, 3)
+BatchImageNP = Sequence[ImageNP]
+AnomalyMap = np.ndarray  # (B, H, W)
+ScoreArray = np.ndarray  # (B,)
+
+
 class AnomalyCLIPInference:
     def __init__(
         self,
-        checkpoint_path,
-        features_list,
-        imgsz=518,
-        depth=9,
-        n_ctx=12,
-        t_n_ctx=4,
-        feature_map_layer=(0, 1, 2, 3),
-        sigma=4,
-        device=None,
-        DPAM_layer=20
-    ):
+        checkpoint_path: str,
+        features_list: List[int],
+        imgsz: int = 518,
+        depth: int = 9,
+        n_ctx: int = 12,
+        t_n_ctx: int = 4,
+        feature_map_layer: Tuple[int, ...] = (0, 1, 2, 3),
+        sigma: int = 4,
+        device: Optional[str] = None,
+        DPAM_layer: int = 20,
+    ) -> None:
         setup_seed(10)
 
         self.checkpoint_path = checkpoint_path
@@ -40,20 +45,19 @@ class AnomalyCLIPInference:
         self.sigma = sigma
         self.DPAM_layer = DPAM_layer
 
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.device: str = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.model = None
-        self.prompt_learner = None
-        self.text_features = None
+        self.model: Optional[torch.nn.Module] = None
+        self.prompt_learner: Optional[AnomalyCLIP_PromptLearner] = None
+        self.text_features: Optional[torch.Tensor] = None
 
         self._load_model_and_prompt_learner()
         self._build_text_features()
-        # self.model = torch.compile(self.model)
 
     # ------------------------------------------------
     # Model & Prompt
     # ------------------------------------------------
-    def _load_model_and_prompt_learner(self):
+    def _load_model_and_prompt_learner(self) -> None:
         params = {
             "Prompt_length": self.n_ctx,
             "learnabel_text_embedding_depth": self.depth,
@@ -79,12 +83,12 @@ class AnomalyCLIPInference:
         self.model = model
         self.prompt_learner = prompt_learner
 
-    def _build_text_features(self):
+    def _build_text_features(self) -> None:
         prompts, tokenized_prompts, compound_prompts_text = self.prompt_learner(
             cls_id=None
         )
 
-        text_features = self.model.encode_text_learn(
+        text_features: torch.Tensor = self.model.encode_text_learn(
             prompts, tokenized_prompts, compound_prompts_text
         ).float()
 
@@ -98,15 +102,19 @@ class AnomalyCLIPInference:
     # ------------------------------------------------
     # Image
     # ------------------------------------------------
-    def _load_and_preprocess_images(self, imgs_np):
+    def _load_and_preprocess_images(
+        self,
+        imgs_np: Union[ImageNP, BatchImageNP],
+    ) -> torch.Tensor:
         if isinstance(imgs_np, np.ndarray):
             imgs_np = [imgs_np]
 
-        assert isinstance(imgs_np, (list, tuple)), "imgs must be image or list of images"
+        elif not isinstance(imgs_np, (list, tuple)):
+            raise TypeError("imgs_np must be an image or a sequence of images")
 
         preprocess, _ = get_transform(Namespace(image_size=self.imgsz))
 
-        tensors = []
+        tensors: List[torch.Tensor] = []
         for img_np in imgs_np:
             img_np = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
             img_pil = Image.fromarray(img_np)
@@ -117,8 +125,11 @@ class AnomalyCLIPInference:
     # ------------------------------------------------
     # Anomaly Map
     # ------------------------------------------------
-    def _compute_anomaly_maps(self, patch_features):
-        anomaly_maps = []
+    def _compute_anomaly_maps(
+        self,
+        patch_features: Sequence[torch.Tensor],
+    ) -> torch.Tensor:
+        anomaly_maps: List[torch.Tensor] = []
 
         for idx, patch_feature in enumerate(patch_features):
             if idx < self.feature_map_layer[0]:
@@ -143,29 +154,34 @@ class AnomalyCLIPInference:
             anomaly_maps.append(anomaly_map)
 
         anomaly_maps = torch.stack(anomaly_maps).sum(dim=0)
-        anomaly_maps = anomaly_maps.detach().cpu().numpy()
-        anomaly_maps = gaussian_filter(anomaly_maps, sigma=(0, self.sigma, self.sigma))
-        anomaly_maps = torch.from_numpy(anomaly_maps).to(self.device)
-
-        return anomaly_maps
-
-    def _compute_image_scores(self, image_features):
-        image_features = image_features / image_features.norm(
-            dim=-1, keepdim=True
+        anomaly_maps = gaussian_filter(
+            anomaly_maps.detach().cpu().numpy(),
+            sigma=(0, self.sigma, self.sigma),
         )
 
-        text_features = self.text_features.squeeze(0)
+        return torch.from_numpy(anomaly_maps).to(self.device)
 
-        logits = image_features @ text_features.T
-        text_probs = (logits / 0.07).softmax(dim=-1)
+    def _compute_image_scores(
+        self,
+        image_features: torch.Tensor,
+    ) -> torch.Tensor:
+        image_features = torch.nn.functional.normalize(image_features, dim=-1)
 
-        score = text_probs[:, 1]  # anomaly score
-        return score
+        text_features: torch.Tensor = self.text_features.squeeze(0)  # (2, D)
+
+        logits: torch.Tensor = image_features @ text_features.T  # (B, 2)
+        probs: torch.Tensor = (logits / 0.07).softmax(dim=-1)
+
+        return probs[:, 1].detach()
 
     # ------------------------------------------------
     # Public API
     # ------------------------------------------------
-    def infer(self, imgs_np, verbose=True):
+    def infer(
+        self,
+        imgs_np: Union[ImageNP, BatchImageNP],
+        verbose: bool = True,
+    ) -> Tuple[AnomalyMap, ScoreArray]:
         t0 = time.time()
         imgs_tensor = self._load_and_preprocess_images(imgs_np)
 
@@ -178,7 +194,9 @@ class AnomalyCLIPInference:
         image_scores = self._compute_image_scores(image_features)
 
         if verbose:
-            dt = time.time() - t0
-            print(f"AnomalyCLIP inference time: {dt*1000:.2f} ms")
+            print(f"AnomalyCLIP inference time: {(time.time()-t0)*1000:.2f} ms")
 
-        return anomaly_maps.cpu().numpy(), image_scores.detach().cpu().numpy()
+        return (
+            anomaly_maps.cpu().numpy(),          # (B, H, W)
+            image_scores.cpu().numpy()          # (B,)
+        )
