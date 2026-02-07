@@ -73,7 +73,7 @@ def visualize(
             cv2.FONT_HERSHEY_SIMPLEX,
             0.45,
             color,
-            1,
+            2,
         )
 
         # bbox + classification
@@ -98,7 +98,7 @@ def visualize(
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
                 color,
-                1,
+                2,
             )
 
     # ----------------------------
