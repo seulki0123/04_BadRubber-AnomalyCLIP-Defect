@@ -5,6 +5,7 @@ import tqdm
 import numpy as np
 from ultralytics import YOLO
 
+from .classes import classes
 
 BBox = Tuple[int, int, int, int]   # x1, y1, x2, y2
 Polygon = np.ndarray               # (N, 2)
@@ -13,14 +14,17 @@ class Classifier:
     def __init__(
         self,
         checkpoint_path: str,
-        anomaly_threshold: float = 0.5,
-        min_area: int = 100,
         imgsz: int = 32,
+        min_area: int = 100,
+        conf_threshold: float = 0.5,
+        anomaly_threshold: float = 0.5,
     ) -> None:
         self.model = YOLO(checkpoint_path)
         self.anomaly_threshold = anomaly_threshold
         self.min_area = min_area
         self.imgsz = imgsz
+        self.conf_threshold = conf_threshold
+        self.classes = classes
         self._warmup()
 
     def _warmup(
@@ -50,8 +54,8 @@ class Classifier:
             regions = []
 
             for cnt in contours:
-                if cv2.contourArea(cnt) < self.min_area:
-                    continue
+                # if cv2.contourArea(cnt) < self.min_area:
+                #     continue
 
                 polygon = cnt.squeeze(1)
                 x, y, w, h = cv2.boundingRect(cnt)
@@ -67,6 +71,7 @@ class Classifier:
                     "polygon": polygon,
                     "bbox": bbox,
                     "anomaly_score": score,
+                    "area": cv2.contourArea(cnt),
                 })
 
             global_score = self.compute_global_score(amap)
@@ -119,13 +124,18 @@ class Classifier:
 
             cls_id = int(pred.probs.top1)
             conf = float(pred.probs.top1conf)
-            cls_name = self.model.names[cls_id]
+            # cls_name = self.model.names[cls_id]
+            class_name = self.classes[cls_id]["name"]
+            is_pass = self.classes[cls_id]["pass"]
+            color = self.classes[cls_id]["color"]
 
             results_batch[img_idx].append({
                 "bbox": bbox,
                 "class_id": cls_id,
-                "class_name": cls_name,
+                "class_name": class_name,
                 "confidence": conf,
+                "pass": is_pass,
+                "color": color,
             })
 
         return results_batch
@@ -153,12 +163,25 @@ class Classifier:
                 for region in regions_batch[img_idx]["regions"]:
                     region.setdefault("class_name", None)
                     region.setdefault("confidence", None)
+                    region.setdefault("pass", True)
+
                     if tuple(region["bbox"]) == tuple(det["bbox"]):
-                        region.update(det)
+                        is_pass = self._decide_pass(det, region)
+
+                        det_with_area = det.copy()
+                        det_with_area["pass"] = is_pass
+
+                        region.update(det_with_area)
                         break
 
         return regions_batch
 
+    def _decide_pass(self, det: Dict[str, Any], region: Dict[str, Any]) -> bool:
+        return (
+            det["pass"]
+            or det["confidence"] < self.conf_threshold
+            or region["area"] < self.min_area
+        )
 
     def compute_global_score(
         self,

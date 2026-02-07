@@ -23,6 +23,7 @@ def visualize(
                 "bbox": (x1, y1, x2, y2),
                 "anomaly_score": float,
                 "class_name": str,
+                "pass": bool,
                 "confidence": float,
             }
         ]
@@ -48,14 +49,17 @@ def visualize(
     for region in result["regions"]:
         poly = region["polygon"].astype(np.int32)
         bbox = region["bbox"]
+        is_pass = region.get("pass", False)
+        color = region.get("color", (0, 0, 0)) if not is_pass else (255, 255, 255)
         a_score = region.get("anomaly_score", 0.0)
+        area = region.get("area", 0)
 
         # polygon
         cv2.polylines(
             vis_img,
             [poly],
             isClosed=True,
-            color=(0, 255, 255),
+            color=color,
             thickness=1,
         )
 
@@ -64,11 +68,11 @@ def visualize(
         cy = int(np.clip(poly[:, 1].mean(), 0, vis_img.shape[0] - 1))
         cv2.putText(
             vis_img,
-            f"A:{a_score:.2f}",
+            f"A:{a_score:.2f}, {area:.0f}",
             (cx, cy),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.45,
-            (0, 255, 255),
+            color,
             1,
         )
 
@@ -82,7 +86,7 @@ def visualize(
                 vis_img,
                 (x1, y1),
                 (x2, y2),
-                (0, 0, 255),
+                color,
                 1,
             )
 
@@ -93,7 +97,7 @@ def visualize(
                 (x1, max(y1 - 5, 12)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
-                (255, 255, 255),
+                color,
                 1,
             )
 

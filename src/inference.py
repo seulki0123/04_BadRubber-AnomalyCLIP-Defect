@@ -28,6 +28,7 @@ def inference(
     classifier = Classifier(
         checkpoint_path=classifier_checkpoint_path,
         anomaly_threshold=0.25,
+        conf_threshold=0.5,
         min_area=112,
         imgsz=32,
     )

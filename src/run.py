@@ -10,7 +10,7 @@ if __name__ == "__main__":
     )
     anomalyclip_checkpoint_path = "./NAS/anomaly/weights/SSBR/9_12_4_mvtec+F1038-F2150-M2520/epoch_15.pth"
     bgremover_checkpoint_path = "./NAS/segment/weights/rmbg/SSBR_F2150-M2520-F1038/weights/best.pt"
-    classifier_checkpoint_path = "./NAS/classify/weights/SSBR/F2150/weights/best.pt"
+    classifier_checkpoint_path = "./NAS/classify/weights/SSBR/2550H_imgsz32/weights/best.pt"
 
     results = inference(
         imgs_path=imgs_path,
