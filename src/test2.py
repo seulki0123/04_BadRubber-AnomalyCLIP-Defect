@@ -27,6 +27,8 @@ if __name__ == "__main__":
         부적합per = 0
         Class검출수 = {}
 
+        error_images = []
+
         def pinrt2():
             print(f"적합EA: {적합EA}")
             print(f"부적합EA: {부적합EA}")
@@ -54,10 +56,15 @@ if __name__ == "__main__":
                     continue
 
                 image_path = os.path.join(src_dir, image)
-                labels = model.pred(
-                    image_path=image_path,
-                    save_dir=dst_dir,
-                )
+
+                try:
+                    labels = model.pred(
+                        image_path=image_path,
+                        save_dir=dst_dir,
+                    )
+                except:
+                    error_images.append(image_path)
+                    continue
 
                 TotalEA += 1
                 print(labels)
@@ -83,3 +90,5 @@ if __name__ == "__main__":
             pinrt2()
 
         pinrt2()
+
+    print(f"Error images: {error_images}")
