@@ -71,9 +71,9 @@ def visualize(
             f"A:{a_score:.2f}, {area:.0f}",
             (cx, cy),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.45,
+            0.6,
             color,
-            2,
+            1,
         )
 
         # bbox + classification
@@ -96,9 +96,9 @@ def visualize(
                 label,
                 (x1, max(y1 - 5, 12)),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
+                0.6,
                 color,
-                2,
+                2 if not is_pass else 1,
             )
 
     # ----------------------------
