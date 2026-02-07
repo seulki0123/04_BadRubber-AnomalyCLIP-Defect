@@ -13,7 +13,7 @@ if __name__ == "__main__":
     )
     
     grade = "ForClassification"
-    for date in ['2025-11-27', '2025-12-04','2025-12-24', '2025-12-25']:
+    for date in ['2025-12-30','2026-01-05', '2026-01-06', '2026-01-12']:
 
         TotalEA = 0
 
@@ -27,8 +27,6 @@ if __name__ == "__main__":
         부적합per = 0
         Class검출수 = {}
 
-        error_images = []
-
         def pinrt2():
             print(f"적합EA: {적합EA}")
             print(f"부적합EA: {부적합EA}")
@@ -40,7 +38,7 @@ if __name__ == "__main__":
             print("-"*100, "\n")
 
         model.warmup()
-        if date in ["2026-01-30", "2026-02-04", "2026-02-05"]:
+        if date in ["2026-01-30", "2026-02-04", "2026-02-05", '2026-01-05', '2026-01-06']:
             cam_list = ["CAM1", "CAM2", "CAM3"]
         else:
             cam_list = [""]
@@ -56,15 +54,10 @@ if __name__ == "__main__":
                     continue
 
                 image_path = os.path.join(src_dir, image)
-
-                try:
-                    labels = model.pred(
-                        image_path=image_path,
-                        save_dir=dst_dir,
-                    )
-                except:
-                    error_images.append(image_path)
-                    continue
+                labels = model.pred(
+                    image_path=image_path,
+                    save_dir=dst_dir,
+                )
 
                 TotalEA += 1
                 print(labels)
@@ -90,5 +83,3 @@ if __name__ == "__main__":
             pinrt2()
 
         pinrt2()
-
-    print(f"Error images: {error_images}")

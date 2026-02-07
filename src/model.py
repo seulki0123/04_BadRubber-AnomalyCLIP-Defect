@@ -221,7 +221,7 @@ class Model:
                 keep_indices_NG.append(i)
 
 
-            #cv2.imwrite(os.path.join(crops_dir, f'{class_number}_{filename}_4_crop_{i}.jpg'), crop)
+            cv2.imwrite(os.path.join(crops_dir, f'{class_number}_{filename}_4_crop_{i}.jpg'), crop)
 
         bboxes_OK = [bboxes[i] for i in keep_indices_OK]
         bboxes_NG = [bboxes[i] for i in keep_indices_NG]
