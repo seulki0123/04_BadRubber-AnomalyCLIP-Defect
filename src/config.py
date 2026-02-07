@@ -50,6 +50,20 @@ class YOLOConfig:
     enable_faulty_cleanup: bool = True  # 불량 이미지 자동 삭제 기능 사용 여부 (True: 사용, False: 비활성화)
     enable_meta_cleanup: bool = True  # 메타데이터 자동 삭제 기능 사용 여부 (True: 사용, False: 비활성화)
 
+@dataclass
+class AnomalyInspectorConfig:
+    anomalyclip_model_path: str = "model/anomaly_inspector/anomalyclip/9_12_4_mvtec+F1038-F2150-M2520/epoch_15.pth"
+    anomalyclip_imgsz: int = 32 * 12
+
+    bgremover_model_path: str = "model/anomaly_inspector/rmbg/SSBR_F2150-M2520-F1038"
+    bgremover_imgsz: int = 32 * 5
+
+    classifier_model_path: str = "model/anomaly_inspector/classify/2550H_imgsz32/weights/best.pt"
+    classifier_imgsz: int = 32 * 1
+
+    anomaly_threshold: float = 0.25
+    anomaly_min_area: int = 112
+    classifier_conf_threshold: float = 0.5
 
 @dataclass
 class PairMatchingConfig:
@@ -66,6 +80,7 @@ class BalerServerConfig:
     model_paths: ModelPathsConfig = field(default_factory=ModelPathsConfig)  # 모델 경로 설정
     yolo: YOLOConfig = field(default_factory=YOLOConfig)  # YOLO 모델 설정
     pair_matching: PairMatchingConfig = field(default_factory=PairMatchingConfig)  # 이미지 쌍 매칭 설정
+    anomaly_inspector: AnomalyInspectorConfig = field(default_factory=AnomalyInspectorConfig)
     
     def get_yolo_model_path(self) -> str:
         """YOLO 모델 절대 경로 반환"""

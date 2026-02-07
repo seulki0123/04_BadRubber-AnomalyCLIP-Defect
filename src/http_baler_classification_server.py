@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 from classify_paired_images import ProcessClassifier
 from config import get_config
+from AnomalyInspector import AnomalyInspector
 
 # YOLO 모델 로드 (ultralytics)
 try:
@@ -986,6 +987,17 @@ def main() -> None:
 
     # 핸들러에 config 설정
     F1810BalerClassificationRequestHandler.config = config
+    F1810BalerClassificationRequestHandler.anomaly_inspector = AnomalyInspector(
+        anomalyclip_checkpoint_path=config.anomaly_inspector.anomalyclip_model_path,
+        bgremover_checkpoint_path=config.anomaly_inspector.bgremover_model_path,
+        classifier_checkpoint_path=config.anomaly_inspector.classifier_model_path,
+        anomalyclip_imgsz=config.anomaly_inspector.anomalyclip_imgsz,
+        bgremover_imgsz=config.anomaly_inspector.bgremover_imgsz,
+        classifier_imgsz=config.anomaly_inspector.classifier_imgsz,
+        anomaly_threshold=config.anomaly_inspector.anomaly_threshold,
+        anomaly_min_area=config.anomaly_inspector.anomaly_min_area,
+        classifier_conf_threshold=config.anomaly_inspector.classifier_conf_threshold,
+    )
 
     # 서버에 device 정보 저장
     class CustomHTTPServer(ThreadingHTTPServer):

@@ -9,9 +9,9 @@ from PIL import Image
 from scipy.ndimage import gaussian_filter
 from argparse import Namespace
 
-from anomalyclip import AnomalyCLIP_lib
-from anomalyclip.utils import get_transform, setup_seed
-from anomalyclip.prompt_ensemble import AnomalyCLIP_PromptLearner
+from . import AnomalyCLIP_lib
+from .utils import get_transform, setup_seed
+from .prompt_ensemble import AnomalyCLIP_PromptLearner
 
 
 ImageNP = np.ndarray  # (H, W, 3)
@@ -82,7 +82,7 @@ class AnomalyCLIPInference:
             "ViT-L/14@336px",
             device=self.device,
             design_details=params,
-            download_root="./checkpoints",
+            download_root="./model/anomaly_inspector/anomalyclip",
         )
         model.eval()
 

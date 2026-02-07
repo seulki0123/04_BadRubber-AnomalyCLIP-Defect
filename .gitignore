@@ -6,6 +6,7 @@ __pycache__/
 *.pyd
 
 checkpoints/
+model/
 results/
 tests/
 
