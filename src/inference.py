@@ -1,7 +1,9 @@
 import cv2
+
 from anomalyclip import AnomalyCLIPInference
 from anomalyclip.utils import visualize
 from removebg import BackgroundRemover
+from classify import Classifier
 
 if __name__ == "__main__":
 
@@ -21,6 +23,11 @@ if __name__ == "__main__":
         checkpoint_path="./NAS/segment/weights/rmbg/SSBR_F2150-M2520-F1038/weights/best.pt",
         imgsz=imgsz,
     )
+    classifier = Classifier(
+        checkpoint_path="./NAS/classify/weights/SSBR/F2150/weights/best.pt",
+        anomaly_threshold=0.25,
+        min_area=10,
+    )
 
     # load image
     imgs_np = [cv2.imread(img_path) for img_path in imgs_path]
@@ -34,6 +41,23 @@ if __name__ == "__main__":
 
     # filter anomaly map by foreground mask
     filtered_anomaly_maps = anomaly_maps * foreground_masks
+
+    # classify
+    classify_results = classifier.classify_batch(
+        images=imgs_np,
+        filtered_anomaly_maps=filtered_anomaly_maps,
+    )
+
+    # visualize classify results
+    for i, res in enumerate(classify_results):
+        save_path = f"{imgs_path[i]}_classified.jpg"
+
+        classifier.visualize(
+            image=imgs_np[i],
+            anomaly_map=filtered_anomaly_maps[i],
+            result=res,
+            save_path=save_path,
+        )
 
     # visualize filtered anomaly map
     for i, (img, amap, score) in enumerate(zip(imgs_np, filtered_anomaly_maps, image_scores)):
