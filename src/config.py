@@ -84,7 +84,7 @@ class BalerServerConfig:
     
     def get_yolo_model_path(self) -> str:
         """YOLO 모델 절대 경로 반환"""
-        base_dir = Path(__file__).parent
+        base_dir = Path(__file__).parent.parent
         return str(base_dir / self.yolo.model_path)
     
     def get_meta_dir(self, date_str: Optional[str] = None) -> str:
@@ -94,7 +94,7 @@ class BalerServerConfig:
             date_str: 날짜 문자열 (YYYY-MM-DD 형식, 예: "2025-12-22")
                       None이면 기본 meta 폴더 반환
         """
-        base_dir = Path(__file__).parent
+        base_dir = Path(__file__).parent.parent
         if date_str:
             # 날짜별 폴더 생성: meta/2025-12-22/
             meta_path = base_dir / self.yolo.meta_dir / date_str
@@ -110,7 +110,7 @@ class BalerServerConfig:
             date_str: 날짜 문자열 (YYYY-MM-DD 형식, 예: "2025-12-22")
                       None이면 기본 faulty_img 폴더 반환
         """
-        base_dir = Path(__file__).parent
+        base_dir = Path(__file__).parent.parent
         if date_str:
             # 날짜별 폴더 생성: faulty_img/2025-12-22/
             faulty_path = base_dir / self.yolo.faulty_img_dir / date_str

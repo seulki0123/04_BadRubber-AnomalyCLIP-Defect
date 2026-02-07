@@ -113,7 +113,7 @@ class AnomalyInspector:
             # annotated image
             ann_img = visualize(
                 result=res,
-                draw_anomaly_map=True
+                draw_anomaly_map=False
             ) if has_faulty else None
 
             batch_results.append((ann_img, dets, has_faulty))

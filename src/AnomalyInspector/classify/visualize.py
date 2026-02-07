@@ -50,7 +50,7 @@ def visualize(
         poly = region["polygon"].astype(np.int32)
         bbox = region["bbox"]
         is_pass = region.get("pass", False)
-        color = region.get("color", (0, 0, 0)) if not is_pass else (255, 255, 255)
+        color = region.get("color", (0, 0, 0)) if not is_pass else (128, 128, 128)
         a_score = region.get("anomaly_score", 0.0)
         area = region.get("area", 0)
 
@@ -113,7 +113,7 @@ def visualize(
             cv2.FONT_HERSHEY_SIMPLEX,
             0.6,
             (255, 255, 255),
-            2,
+            1,
         )
 
     if save_path is not None:
