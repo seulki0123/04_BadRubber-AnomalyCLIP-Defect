@@ -2,6 +2,7 @@ import time
 from typing import List, Tuple, Sequence, Optional, Union
 
 import cv2
+import tqdm
 import torch
 import numpy as np
 from PIL import Image
@@ -53,10 +54,23 @@ class AnomalyCLIPInference:
 
         self._load_model_and_prompt_learner()
         self._build_text_features()
+        self._warmup()
 
     # ------------------------------------------------
     # Model & Prompt
     # ------------------------------------------------
+    def _warmup(
+        self,
+        batch_size: int = 1,
+    ) -> None:
+        for _ in tqdm.tqdm(range(10), desc="Warm up AnomalyCLIP model"):
+            dummy_images = [
+                np.zeros((self.imgsz, self.imgsz, 3), dtype=np.uint8)
+                for _ in range(batch_size)
+            ]
+            _ = self.infer(dummy_images)
+
+
     def _load_model_and_prompt_learner(self) -> None:
         params = {
             "Prompt_length": self.n_ctx,
