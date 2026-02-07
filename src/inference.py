@@ -12,7 +12,7 @@ def inference(
     anomalyclip_checkpoint_path: str,
     bgremover_checkpoint_path: str,
     classifier_checkpoint_path: str,
-    imgsz: int = 544,
+    imgsz: int = 32*8,
     verbose: bool = True,
 ):
 
@@ -23,12 +23,13 @@ def inference(
     )
     bgremover = BackgroundRemover(
         checkpoint_path=bgremover_checkpoint_path,
-        imgsz=imgsz,
+        imgsz=32*5,
     )
     classifier = Classifier(
         checkpoint_path=classifier_checkpoint_path,
         anomaly_threshold=0.25,
-        min_area=10,
+        min_area=112,
+        imgsz=32,
     )
     # load image
     t0 = time.time()

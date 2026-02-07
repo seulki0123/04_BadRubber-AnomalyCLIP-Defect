@@ -1,8 +1,10 @@
 from typing import List, Tuple, Dict, Any, Sequence, Optional
 
 import cv2
+import tqdm
 import numpy as np
 from ultralytics import YOLO
+
 
 BBox = Tuple[int, int, int, int]   # x1, y1, x2, y2
 Polygon = np.ndarray               # (N, 2)
@@ -13,10 +15,25 @@ class Classifier:
         checkpoint_path: str,
         anomaly_threshold: float = 0.5,
         min_area: int = 100,
+        imgsz: int = 32,
     ) -> None:
         self.model = YOLO(checkpoint_path)
         self.anomaly_threshold = anomaly_threshold
         self.min_area = min_area
+        self.imgsz = imgsz
+        self._warmup()
+
+    def _warmup(
+        self,
+        batch_size: int = 1,
+    ) -> None:
+        for _ in tqdm.tqdm(range(10), desc="Warm up YOLO classification model"):
+            dummy_images = [
+                np.zeros((self.imgsz, self.imgsz, 3), dtype=np.uint8)
+                for _ in range(batch_size)
+            ]
+            _ = self.model(dummy_images, imgsz=self.imgsz, verbose=False)
+
 
     def _extract_regions_batch(
         self,
@@ -90,7 +107,7 @@ class Classifier:
             return [[] for _ in images]
 
         # YOLOv11 batch classification
-        preds = self.model(crops, verbose=False, imgsz=32)
+        preds = self.model(crops, verbose=False, imgsz=self.imgsz)
 
         results_batch: List[List[Dict[str, Any]]] = [
             [] for _ in images

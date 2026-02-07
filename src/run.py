@@ -3,7 +3,7 @@ from classify import visualize
 
 if __name__ == "__main__":
 
-    imgsz = 544
+    imgsz = 32*12
     imgs_path = (
         "./tests/SSBR_1_20251227_000101_701.jpg",
         "./tests/SSBR_1_20260204_000027_617.jpg"
@@ -27,4 +27,5 @@ if __name__ == "__main__":
         visualize(
             result=res,
             save_path=save_path,
+            draw_anomaly_map=True
         )
