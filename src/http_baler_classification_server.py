@@ -868,7 +868,7 @@ class F1810BalerClassificationRequestHandler(BaseHTTPRequestHandler):
         # 2단계: 모든 이미지를 YOLO 배치 처리
         yolo_results = []
         if self.config and self.config.yolo.enabled:
-            yolo_results = self._detect_faulty_spots_batch(image_paths)
+            yolo_results = self.anomaly_inspector.detect_faulty_spots_batch(image_paths)
         else:
             yolo_results = [(None, [], False)] * image_count
         

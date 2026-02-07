@@ -55,7 +55,7 @@ class AnomalyInspectorConfig:
     anomalyclip_model_path: str = "model/anomaly_inspector/anomalyclip/9_12_4_mvtec+F1038-F2150-M2520/epoch_15.pth"
     anomalyclip_imgsz: int = 32 * 12
 
-    bgremover_model_path: str = "model/anomaly_inspector/rmbg/SSBR_F2150-M2520-F1038"
+    bgremover_model_path: str = "model/anomaly_inspector/rmbg/SSBR_F2150-M2520-F1038/weights/best.pt"
     bgremover_imgsz: int = 32 * 5
 
     classifier_model_path: str = "model/anomaly_inspector/classify/2550H_imgsz32/weights/best.pt"
