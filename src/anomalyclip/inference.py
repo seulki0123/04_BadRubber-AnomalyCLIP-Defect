@@ -26,6 +26,7 @@ class AnomalyCLIPInference:
         feature_map_layer=(0, 1, 2, 3),
         sigma=4,
         device=None,
+        DPAM_layer=20
     ):
         setup_seed(10)
 
@@ -37,6 +38,7 @@ class AnomalyCLIPInference:
         self.t_n_ctx = t_n_ctx
         self.feature_map_layer = feature_map_layer
         self.sigma = sigma
+        self.DPAM_layer = DPAM_layer
 
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -72,7 +74,7 @@ class AnomalyCLIPInference:
 
         prompt_learner.to(self.device)
         model.to(self.device)
-        model.visual.DAPM_replace(DPAM_layer=20)
+        model.visual.DAPM_replace(DPAM_layer=self.DPAM_layer)
 
         self.model = model
         self.prompt_learner = prompt_learner
@@ -96,21 +98,26 @@ class AnomalyCLIPInference:
     # ------------------------------------------------
     # Image
     # ------------------------------------------------
-    def _load_and_preprocess_image(self, img_np):
-        img_np = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
+    def _load_and_preprocess_images(self, imgs_np):
+        if isinstance(imgs_np, np.ndarray):
+            imgs_np = [imgs_np]
 
-        preprocess, _ = get_transform(
-            Namespace(image_size=self.imgsz)
-        )
-        img_pil = Image.fromarray(img_np)
-        img_tensor = preprocess(img_pil).unsqueeze(0).to(self.device)
+        assert isinstance(imgs_np, (list, tuple)), "imgs must be image or list of images"
 
-        return img_tensor
+        preprocess, _ = get_transform(Namespace(image_size=self.imgsz))
+
+        tensors = []
+        for img_np in imgs_np:
+            img_np = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
+            img_pil = Image.fromarray(img_np)
+            tensors.append(preprocess(img_pil))
+
+        return torch.stack(tensors).to(self.device)
 
     # ------------------------------------------------
     # Anomaly Map
     # ------------------------------------------------
-    def _compute_anomaly_map(self, patch_features):
+    def _compute_anomaly_maps(self, patch_features):
         anomaly_maps = []
 
         for idx, patch_feature in enumerate(patch_features):
@@ -135,53 +142,43 @@ class AnomalyCLIPInference:
 
             anomaly_maps.append(anomaly_map)
 
-        anomaly_map = torch.stack(anomaly_maps).sum(dim=0)
+        anomaly_maps = torch.stack(anomaly_maps).sum(dim=0)
+        anomaly_maps = anomaly_maps.detach().cpu().numpy()
+        anomaly_maps = gaussian_filter(anomaly_maps, sigma=(0, self.sigma, self.sigma))
+        anomaly_maps = torch.from_numpy(anomaly_maps).to(self.device)
 
-        anomaly_map = torch.stack(
-            [
-                torch.from_numpy(
-                    gaussian_filter(i, sigma=self.sigma)
-                )
-                for i in anomaly_map.detach().cpu()
-            ],
-            dim=0,
-        )
+        return anomaly_maps
 
-        return anomaly_map
-
-
-    def _compute_image_score(self, image_features):
+    def _compute_image_scores(self, image_features):
         image_features = image_features / image_features.norm(
             dim=-1, keepdim=True
         )
 
-        text_probs = image_features @ self.text_features.permute(0, 2, 1)
-        text_probs = (text_probs / 0.07).softmax(-1)
+        text_features = self.text_features.squeeze(0)
 
-        score = text_probs[:, 0, 1]
+        logits = image_features @ text_features.T
+        text_probs = (logits / 0.07).softmax(dim=-1)
+
+        score = text_probs[:, 1]  # anomaly score
         return score
-    
 
     # ------------------------------------------------
     # Public API
     # ------------------------------------------------
-    def infer(self, img_np, verbose=True):
+    def infer(self, imgs_np, verbose=True):
         t0 = time.time()
-
-        img_tensor = self._load_and_preprocess_image(img_np)
+        imgs_tensor = self._load_and_preprocess_images(imgs_np)
 
         with torch.no_grad():
             image_features, patch_features = self.model.encode_image(
-                img_tensor,
-                self.features_list,
-                DPAM_layer=20,
+                imgs_tensor, self.features_list, DPAM_layer=self.DPAM_layer
             )
 
-        anomaly_map = self._compute_anomaly_map(patch_features)
-        image_score = self._compute_image_score(image_features)
+        anomaly_maps = self._compute_anomaly_maps(patch_features)
+        image_scores = self._compute_image_scores(image_features)
 
-        dt = (time.time() - t0) * 1000
         if verbose:
-            print(f"Inference time: {dt:.2f} ms")
+            dt = time.time() - t0
+            print(f"AnomalyCLIP inference time: {dt*1000:.2f} ms")
 
-        return anomaly_map.numpy(), image_score
+        return anomaly_maps.cpu().numpy(), image_scores.detach().cpu().numpy()

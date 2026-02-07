@@ -6,18 +6,16 @@ from removebg import BackgroundRemover
 if __name__ == "__main__":
 
     imgsz = 544
-    image_path = "./tests/SSBR_1_20251227_000101_701.jpg"
+    imgs_path = (
+        "./tests/SSBR_1_20251227_000101_701.jpg",
+        "./tests/SSBR_1_20260204_000027_617.jpg"
+    )
 
     # load models
     inferencer = AnomalyCLIPInference(
         checkpoint_path="./checkpoints/9_12_4_mvtec+F1038-F2150-M2520/epoch_15.pth",
         features_list=[6, 12, 18, 24],
         imgsz=imgsz,
-        depth=9,
-        n_ctx=12,
-        t_n_ctx=4,
-        feature_map_layer=(0, 1, 2, 3),
-        sigma=4,
     )
     bgremover = BackgroundRemover(
         checkpoint_path="./NAS/segment/weights/rmbg/SSBR_F2150-M2520-F1038/weights/best.pt",
@@ -25,21 +23,24 @@ if __name__ == "__main__":
     )
 
     # load image
-    img_np = cv2.imread(image_path)
-    img_np = cv2.resize(img_np, (imgsz, imgsz))
+    imgs_np = [cv2.imread(img_path) for img_path in imgs_path]
+    imgs_np = [cv2.resize(img, (imgsz, imgsz)) for img in imgs_np]
 
     # get anomaly map
-    anomaly_map, image_score = inferencer.infer(img_np)
+    anomaly_maps, image_scores = inferencer.infer(imgs_np)
 
     # get foreground mask
-    foreground_mask = bgremover.remove(img_np)
+    foreground_masks = bgremover.remove(imgs_np)
 
     # filter anomaly map by foreground mask
-    filtered_anomaly_map = anomaly_map * foreground_mask
+    filtered_anomaly_maps = anomaly_maps * foreground_masks
 
     # visualize filtered anomaly map
-    visualize(img_np, filtered_anomaly_map, save_path=image_path+"_anomaly_map.jpg")
-    print(anomaly_map)
-    print(foreground_mask)
-    print(filtered_anomaly_map)
-    print(image_score)
+    for i, (img, amap, score) in enumerate(zip(imgs_np, filtered_anomaly_maps, image_scores)):
+        img_path = imgs_path[i]
+        visualize(
+            img,
+            amap[None],   # visualize가 (1, H, W) 기대하니까
+            save_path=f"{img_path}_anomaly_map_{score:.4f}.jpg"
+        )
+        print(f"anomaly score: {img_path} {score:.4f}")
