@@ -54,6 +54,9 @@ def visualize(
         a_score = region.get("anomaly_score", 0.0)
         area = region.get("area", 0)
 
+        if is_pass:
+            continue
+
         # polygon
         cv2.polylines(
             vis_img,

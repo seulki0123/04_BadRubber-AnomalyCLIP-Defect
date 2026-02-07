@@ -61,9 +61,9 @@ class AnomalyInspectorConfig:
     classifier_model_path: str = "model/anomaly_inspector/classify/2550H_imgsz32/weights/best.pt"
     classifier_imgsz: int = 32 * 1
 
-    anomaly_threshold: float = 0.25
+    anomaly_threshold: float = 0.35
     anomaly_min_area: int = 112
-    classifier_conf_threshold: float = 0.5
+    classifier_conf_threshold: float = 0.75
 
 @dataclass
 class PairMatchingConfig:
