@@ -1,70 +1,67 @@
+import time
+from typing import List
+
 import cv2
 
 from anomalyclip import AnomalyCLIPInference
-from anomalyclip.utils import visualize
 from removebg import BackgroundRemover
 from classify import Classifier
 
-if __name__ == "__main__":
-
-    imgsz = 544
-    imgs_path = (
-        "./tests/SSBR_1_20251227_000101_701.jpg",
-        "./tests/SSBR_1_20260204_000027_617.jpg"
-    )
+def inference(
+    imgs_path: List[str],
+    anomalyclip_checkpoint_path: str,
+    bgremover_checkpoint_path: str,
+    classifier_checkpoint_path: str,
+    imgsz: int = 544,
+    verbose: bool = True,
+):
 
     # load models
     inferencer = AnomalyCLIPInference(
-        checkpoint_path="./checkpoints/9_12_4_mvtec+F1038-F2150-M2520/epoch_15.pth",
-        features_list=[6, 12, 18, 24],
+        checkpoint_path=anomalyclip_checkpoint_path,
         imgsz=imgsz,
     )
     bgremover = BackgroundRemover(
-        checkpoint_path="./NAS/segment/weights/rmbg/SSBR_F2150-M2520-F1038/weights/best.pt",
+        checkpoint_path=bgremover_checkpoint_path,
         imgsz=imgsz,
     )
     classifier = Classifier(
-        checkpoint_path="./NAS/classify/weights/SSBR/F2150/weights/best.pt",
+        checkpoint_path=classifier_checkpoint_path,
         anomaly_threshold=0.25,
         min_area=10,
     )
-
     # load image
+    t0 = time.time()
     imgs_np = [cv2.imread(img_path) for img_path in imgs_path]
     imgs_np = [cv2.resize(img, (imgsz, imgsz)) for img in imgs_np]
 
+    
     # get anomaly map
+    t1 = time.time()
     anomaly_maps, image_scores = inferencer.infer(imgs_np)
 
     # get foreground mask
+    t2 = time.time()
     foreground_masks = bgremover.remove(imgs_np)
 
     # filter anomaly map by foreground mask
+    t3 = time.time()
     filtered_anomaly_maps = anomaly_maps * foreground_masks
 
     # classify
-    classify_results = classifier.classify_batch(
+    t4 = time.time()
+    results = classifier.classify_batch(
         images=imgs_np,
         filtered_anomaly_maps=filtered_anomaly_maps,
     )
 
-    # visualize classify results
-    for i, res in enumerate(classify_results):
-        save_path = f"{imgs_path[i]}_classified.jpg"
+    t5 = time.time()
+    if verbose:
+        print(f"load image: {(t1 - t0)*1000:.2f}ms")
+        print(f"get anomaly map: {(t2 - t1)*1000:.2f}ms")
+        print(f"get foreground mask: {(t3 - t2)*1000:.2f}ms")
+        print(f"filter anomaly map: {(t4 - t3)*1000:.2f}ms")
+        print(f"classify: {(t5 - t4)*1000:.2f}ms")
+        print(f"total: {(t5 - t0)*1000:.2f}ms")
 
-        classifier.visualize(
-            image=imgs_np[i],
-            anomaly_map=filtered_anomaly_maps[i],
-            result=res,
-            save_path=save_path,
-        )
-
-    # visualize filtered anomaly map
-    for i, (img, amap, score) in enumerate(zip(imgs_np, filtered_anomaly_maps, image_scores)):
-        img_path = imgs_path[i]
-        visualize(
-            img,
-            amap[None],   # visualize가 (1, H, W) 기대하니까
-            save_path=f"{img_path}_anomaly_map_{score:.4f}.jpg"
-        )
-        print(f"anomaly score: {img_path} {score:.4f}")
+    return results

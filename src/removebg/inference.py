@@ -11,9 +11,8 @@ class BackgroundRemover:
     def remove(
         self,
         image: Sequence[np.ndarray],
-        verbose: bool = True,
     ) -> np.ndarray:
-        results = self.model(image, imgsz=self.imgsz, verbose=verbose)
+        results = self.model(image, imgsz=self.imgsz, verbose=False)
         return self.yolo_results_to_masks(results, self.imgsz)
 
     @staticmethod

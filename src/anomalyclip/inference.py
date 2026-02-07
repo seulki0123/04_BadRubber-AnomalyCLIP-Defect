@@ -23,7 +23,7 @@ class AnomalyCLIPInference:
     def __init__(
         self,
         checkpoint_path: str,
-        features_list: List[int],
+        features_list: List[int] = [6, 12, 18, 24],
         imgsz: int = 518,
         depth: int = 9,
         n_ctx: int = 12,
@@ -180,9 +180,7 @@ class AnomalyCLIPInference:
     def infer(
         self,
         imgs_np: Union[ImageNP, BatchImageNP],
-        verbose: bool = True,
     ) -> Tuple[AnomalyMap, ScoreArray]:
-        t0 = time.time()
         imgs_tensor = self._load_and_preprocess_images(imgs_np)
 
         with torch.no_grad():
@@ -192,9 +190,6 @@ class AnomalyCLIPInference:
 
         anomaly_maps = self._compute_anomaly_maps(patch_features)
         image_scores = self._compute_image_scores(image_features)
-
-        if verbose:
-            print(f"AnomalyCLIP inference time: {(time.time()-t0)*1000:.2f} ms")
 
         return (
             anomaly_maps.cpu().numpy(),          # (B, H, W)

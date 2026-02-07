@@ -13,32 +13,24 @@ class Classifier:
         checkpoint_path: str,
         anomaly_threshold: float = 0.5,
         min_area: int = 100,
-        verbose: bool = True,
     ) -> None:
         self.model = YOLO(checkpoint_path)
         self.anomaly_threshold = anomaly_threshold
         self.min_area = min_area
-        self.verbose = verbose
 
     def _extract_regions_batch(
         self,
         anomaly_maps: np.ndarray,   # (B, H, W)
-    ) -> Tuple[
-        List[List[Polygon]],
-        List[List[BBox]],
-    ]:
-        all_polygons: List[List[Polygon]] = []
-        all_bboxes: List[List[BBox]] = []
+    ) -> List[Dict[str, Any]]:
+        outputs = []
 
         for amap in anomaly_maps:
             binary = (amap >= self.anomaly_threshold).astype(np.uint8) * 255
-
             contours, _ = cv2.findContours(
                 binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
             )
 
-            polygons: List[Polygon] = []
-            bboxes: List[BBox] = []
+            regions = []
 
             for cnt in contours:
                 if cv2.contourArea(cnt) < self.min_area:
@@ -46,14 +38,28 @@ class Classifier:
 
                 polygon = cnt.squeeze(1)
                 x, y, w, h = cv2.boundingRect(cnt)
+                bbox = (x, y, x + w, y + h)
 
-                polygons.append(polygon)
-                bboxes.append((x, y, x + w, y + h))
+                score = self.compute_polygon_score(
+                    amap,
+                    polygon,
+                    mode="mean",
+                )
 
-            all_polygons.append(polygons)
-            all_bboxes.append(bboxes)
+                regions.append({
+                    "polygon": polygon,
+                    "bbox": bbox,
+                    "anomaly_score": score,
+                })
 
-        return all_polygons, all_bboxes
+            global_score = self.compute_global_score(amap)
+
+            outputs.append({
+                "regions": regions,
+                "global_anomaly_score": global_score,
+            })
+
+        return outputs
 
     def _classify_crops_batch(
         self,
@@ -84,7 +90,7 @@ class Classifier:
             return [[] for _ in images]
 
         # YOLOv11 batch classification
-        preds = self.model(crops, verbose=self.verbose, imgsz=32)
+        preds = self.model(crops, verbose=False, imgsz=32)
 
         results_batch: List[List[Dict[str, Any]]] = [
             [] for _ in images
@@ -109,126 +115,33 @@ class Classifier:
 
     def classify_batch(
         self,
-        images: Sequence[np.ndarray],          # (B, H, W, 3)
-        filtered_anomaly_maps: np.ndarray,     # (B, H, W)
+        images: Sequence[np.ndarray],
+        filtered_anomaly_maps: np.ndarray,
     ) -> List[Dict[str, Any]]:
-        polygons_batch, bboxes_batch = self._extract_regions_batch(
-            filtered_anomaly_maps
-        )
 
-        detections_batch = self._classify_crops_batch(
-            images, bboxes_batch
-        )
+        regions_batch = self._extract_regions_batch(filtered_anomaly_maps)
 
-        outputs: List[Dict[str, Any]] = []
+        bboxes_batch = [
+            [r["bbox"] for r in img_res["regions"]]
+            for img_res in regions_batch
+        ]
 
-        for i in range(len(images)):
-            outputs.append({
-                "image_index": i,
-                "polygons": polygons_batch[i],
-                "detections": detections_batch[i],
-            })
+        detections_batch = self._classify_crops_batch(images, bboxes_batch)
 
-        return outputs
+        for img_idx, dets in enumerate(detections_batch):
+            regions_batch[img_idx]["image"] = images[img_idx]
+            regions_batch[img_idx]["anomaly_map"] = filtered_anomaly_maps[img_idx]
 
-    def visualize(
-        self,
-        image: np.ndarray,              # (H, W, 3)
-        anomaly_map: np.ndarray,        # (H, W)
-        result: Dict[str, Any],         # classify_batch[i]
-        save_path: Optional[str] = None,
-        alpha: float = 0.5,
-        draw_anomaly_map: bool = False,
-    ) -> np.ndarray:
-        """
-        Returns:
-            vis_img: np.ndarray (H, W, 3)
-        """
-        vis_img = image.copy()
+            for det in dets:
+                for region in regions_batch[img_idx]["regions"]:
+                    region.setdefault("class_name", None)
+                    region.setdefault("confidence", None)
+                    if tuple(region["bbox"]) == tuple(det["bbox"]):
+                        region.update(det)
+                        break
 
-        if draw_anomaly_map:
-            # --- anomaly heatmap overlay ---
-            heatmap = (anomaly_map * 255).astype(np.uint8)
-            heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-            vis_img = cv2.addWeighted(vis_img, 1 - alpha, heatmap, alpha, 0)
+        return regions_batch
 
-        # --- polygons + anomaly score ---
-        for poly in result["polygons"]:
-            poly_int = poly.astype(np.int32)
-
-            score = self.compute_polygon_score(
-                anomaly_map,
-                poly,
-                mode="mean",
-            )
-
-            cv2.polylines(
-                vis_img,
-                [poly_int],
-                isClosed=True,
-                color=(0, 255, 255),
-                thickness=1,
-            )
-
-            # polygon 중심
-            cx = int(poly_int[:, 0].mean())
-            cy = int(poly_int[:, 1].mean())
-
-            cv2.putText(
-                vis_img,
-                f"A:{score:.2f}",
-                (cx, cy),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.45,
-                (0, 255, 255),
-                1,
-            )
-
-        # --- detections ---
-        for det in result["detections"]:
-            x1, y1, x2, y2 = det["bbox"]
-            cls_name = det["class_name"]
-            conf = det["confidence"]
-
-            cv2.rectangle(
-                vis_img,
-                (x1, y1),
-                (x2, y2),
-                (0, 0, 255),
-                1,
-            )
-
-            label = f"{cls_name} {conf:.2f}"
-            cv2.putText(
-                vis_img,
-                label,
-                (x1, max(y1 - 5, 10)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (255, 255, 255),
-                1,
-            )
-
-        global_score = self.compute_global_score(
-            anomaly_map,
-            mode="topk",
-            topk_ratio=0.05,
-        )
-
-        cv2.putText(
-            vis_img,
-            f"Global A: {global_score:.3f}",
-            (10, 20),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            (255, 255, 255),
-            2,
-        )
-
-        if save_path is not None:
-            cv2.imwrite(save_path, vis_img)
-
-        return vis_img
 
     def compute_global_score(
         self,
