@@ -8,6 +8,7 @@ from ultralytics import YOLO
 from .classes import classes
 
 BBox = Tuple[int, int, int, int]   # x1, y1, x2, y2
+BBox_n = Tuple[float, float, float, float]  # normalized xyxy
 Polygon = np.ndarray               # (N, 2)
 
 class Classifier:
@@ -46,6 +47,7 @@ class Classifier:
         outputs = []
 
         for amap in anomaly_maps:
+            H, W = amap.shape
             binary = (amap >= self.anomaly_threshold).astype(np.uint8) * 255
             contours, _ = cv2.findContours(
                 binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
@@ -58,8 +60,17 @@ class Classifier:
                 #     continue
 
                 polygon = cnt.squeeze(1)
+                polygon_n = polygon.astype(np.float32)
+                polygon_n[:, 0] /= W
+                polygon_n[:, 1] /= H
                 x, y, w, h = cv2.boundingRect(cnt)
                 bbox = (x, y, x + w, y + h)
+                bbox_n = (
+                    self._clamp01(x / W),
+                    self._clamp01(y / H),
+                    self._clamp01((x + w) / W),
+                    self._clamp01((y + h) / H),
+                )
 
                 score = self.compute_polygon_score(
                     amap,
@@ -69,7 +80,9 @@ class Classifier:
 
                 regions.append({
                     "polygon": polygon,
+                    "polygon_n": polygon_n,
                     "bbox": bbox,
+                    "bbox_n": bbox_n,
                     "anomaly_score": score,
                     "area": cv2.contourArea(cnt),
                 })
@@ -182,6 +195,9 @@ class Classifier:
             or det["confidence"] < self.conf_threshold
             or region["area"] < self.min_area
         )
+
+    def _clamp01(self, v: float) -> float:
+        return max(0.0, min(1.0, v))
 
     def compute_global_score(
         self,

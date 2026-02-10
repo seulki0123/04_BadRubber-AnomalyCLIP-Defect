@@ -46,6 +46,7 @@ class AnomalyInspector:
 
         # load image
         imgs_np = [cv2.imread(p) for p in imgs_path]
+        orig_sizes = [img.shape[:2] for img in imgs_np]
         imgs_np = [cv2.resize(img, (self.imgsz, self.imgsz)) for img in imgs_np]
 
         t1 = time.time()
@@ -67,6 +68,8 @@ class AnomalyInspector:
             images=imgs_np,
             filtered_anomaly_maps=filtered_anomaly_maps,
         )
+        for i, res in enumerate(results):
+            res["orig_size"] = orig_sizes[i]  # (h, w)
         t5 = time.time()
 
         if verbose:
@@ -93,18 +96,23 @@ class AnomalyInspector:
 
         batch_results = []
         for i, res in enumerate(r):
+            # original size
+            h0, w0 = res["orig_size"]
 
             # detections
             dets = []
             for region in res["regions"]:
                 if region["pass"]:
                     continue
+
+                x1n, y1n, x2n, y2n = region["bbox_n"]
+                bbox_orig = [int(x1n * w0), int(y1n * h0), int(x2n * w0), int(y2n * h0)]
                 
                 dets.append({
                     "class": int(region["class_id"]),
                     "class_name": region["class_name"],
                     "confidence": region["confidence"],
-                    "bbox": list(map(int, region["bbox"])),  # (x1, y1, x2, y2)
+                    "bbox": bbox_orig,  # (x1, y1, x2, y2)
                 })
 
             # has_faulty
