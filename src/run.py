@@ -41,7 +41,3 @@ if __name__ == "__main__":
             save_path=save_path,
             draw_anomaly_map=True
         )
-
-    # 2. detect faulty spots
-    faulty_spots_results = anomaly_inspector.detect_faulty_spots_batch(imgs_path)
-    print(faulty_spots_results)
