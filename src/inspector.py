@@ -6,39 +6,34 @@ import cv2
 from anomalyclip import AnomalyCLIPInference
 from removebg import BackgroundRemover
 from classify import Classifier, visualize
+from utils import load_config
 
 
 class AnomalyInspector:
-    def __init__(
-        self,
-        anomalyclip_checkpoint_path: str,
-        bgremover_checkpoint_path: str,
-        classifier_checkpoint_path: str,
-        anomalyclip_imgsz: int = 32 * 8,
-        bgremover_imgsz: int = 32 * 5,
-        classifier_imgsz: int = 32,
-        anomaly_threshold: float = 0.25,
-        anomaly_min_area: int = 112,
-        classifier_conf_threshold: float = 0.5,
-    ):
-        self.imgsz = anomalyclip_imgsz
+    def __init__(self):
+        config = load_config()
+        anomalyclip_cfg = config["anomalyclip"]
+        bgremover_cfg = config["bgremover"]
+        classifier_cfg = config["classifier"]
+
+        self.imgsz = anomalyclip_cfg["imgsz"]
 
         self.inferencer = AnomalyCLIPInference(
-            checkpoint_path=anomalyclip_checkpoint_path,
-            imgsz=anomalyclip_imgsz,
+            checkpoint_path=anomalyclip_cfg["checkpoint"],
+            imgsz=anomalyclip_cfg["imgsz"],
         )
 
         self.bgremover = BackgroundRemover(
-            checkpoint_path=bgremover_checkpoint_path,
-            imgsz=bgremover_imgsz,
+            checkpoint_path=bgremover_cfg["checkpoint"],
+            imgsz=bgremover_cfg["imgsz"],
         )
 
         self.classifier = Classifier(
-            checkpoint_path=classifier_checkpoint_path,
-            anomaly_threshold=anomaly_threshold,
-            min_area=anomaly_min_area,
-            conf_threshold=classifier_conf_threshold,
-            imgsz=classifier_imgsz,
+            checkpoint_path=classifier_cfg['checkpoint'],
+            anomaly_threshold=anomalyclip_cfg["threshold"],
+            min_area=anomalyclip_cfg["min_area"],
+            conf_threshold=classifier_cfg["threshold"],
+            imgsz=classifier_cfg["imgsz"],
         )
 
     def inspect(self, imgs_path: List[str], verbose: bool = True) -> List[Dict[str, Any]]:

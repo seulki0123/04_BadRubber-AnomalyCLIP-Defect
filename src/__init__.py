@@ -1,3 +1,3 @@
 from .inspector import AnomalyInspector
 
-__all__ = ["AnomalyInspector"]
+__all__ = []
