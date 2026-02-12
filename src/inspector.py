@@ -3,9 +3,9 @@ from typing import List, Tuple, Optional, Any, Dict
 
 import cv2
 
-from .anomalyclip import AnomalyCLIPInference
-from .removebg import BackgroundRemover
-from .classify import Classifier, visualize
+from anomalyclip import AnomalyCLIPInference
+from removebg import BackgroundRemover
+from classify import Classifier, visualize
 
 
 class AnomalyInspector:
