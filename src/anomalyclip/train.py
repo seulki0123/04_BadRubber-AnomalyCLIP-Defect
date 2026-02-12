@@ -9,10 +9,10 @@ from tqdm import tqdm
 
 import AnomalyCLIP_lib
 from prompt_ensemble import AnomalyCLIP_PromptLearner
-from loss import FocalLoss, BinaryDiceLoss
+from training import FocalLoss, BinaryDiceLoss
+from training import Dataset
+from training import get_logger
 from utils import normalize
-from dataset import Dataset
-from logger import get_logger
 from utils import get_transform
 
 def setup_seed(seed):
@@ -32,7 +32,7 @@ def train(args):
 
     AnomalyCLIP_parameters = {"Prompt_length": args.n_ctx, "learnabel_text_embedding_depth": args.depth, "learnabel_text_embedding_length": args.t_n_ctx}
 
-    model, _ = AnomalyCLIP_lib.load("ViT-L/14@336px", device=device, design_details = AnomalyCLIP_parameters)
+    model, _ = AnomalyCLIP_lib.load("ViT-L/14@336px", device=device, design_details = AnomalyCLIP_parameters, download_root="./model/anomaly_inspector/anomalyclip")
     model.eval()
 
     train_data = Dataset(root=args.train_data_path, transform=preprocess, target_transform=target_transform, dataset_name = args.dataset)

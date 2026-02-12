@@ -3,7 +3,10 @@ from typing import Union, List
 from pkg_resources import packaging
 import torch
 import numpy as np
-from .AnomalyCLIP_lib.simple_tokenizer import SimpleTokenizer as _Tokenizer
+try:
+    from .AnomalyCLIP_lib.simple_tokenizer import SimpleTokenizer as _Tokenizer
+except:
+    from AnomalyCLIP_lib.simple_tokenizer import SimpleTokenizer as _Tokenizer
 # from open_clip import tokenizer
 # simple_tokenizer = tokenizer.SimpleTokenizer()
 from copy import deepcopy

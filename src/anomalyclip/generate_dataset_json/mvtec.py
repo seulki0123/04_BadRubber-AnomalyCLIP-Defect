@@ -7,6 +7,7 @@ class MVTecSolver(object):
         'bottle', 'cable', 'capsule', 'carpet', 'grid',
         'hazelnut', 'leather', 'metal_nut', 'pill', 'screw',
         'tile', 'toothbrush', 'transistor', 'wood', 'zipper',
+        'rubber_BR-A_1280', 'rubber_BR-B_1208'
     ]
 
     def __init__(self, root='data/mvtec'):

@@ -5,8 +5,12 @@ import numpy as np
 import torch
 import torchvision.transforms as transforms
 # from torchvision.transforms import Compose, Resize, ToTensor, Normalize, InterpolationMode
-from .AnomalyCLIP_lib.transform import image_transform
-from .AnomalyCLIP_lib.constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
+try:
+    from .AnomalyCLIP_lib.transform import image_transform
+    from .AnomalyCLIP_lib.constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
+except:
+    from AnomalyCLIP_lib.transform import image_transform
+    from AnomalyCLIP_lib.constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
 
 
 def normalize(pred, max_value=None, min_value=None):
