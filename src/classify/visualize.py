@@ -5,7 +5,6 @@ import cv2
 
 def visualize(
     result: Dict[str, Any],         # classify_batch[i]
-    save_path: Optional[str] = None,
     alpha: float = 0.5,
     draw_anomaly_map: bool = True,
 ) -> np.ndarray:
@@ -33,6 +32,7 @@ def visualize(
     anomaly_map = result.get("anomaly_map", None)
 
     vis_img = image.copy()
+    crops_img = []
 
     # ----------------------------
     # anomaly heatmap overlay
@@ -46,7 +46,7 @@ def visualize(
     # ----------------------------
     # regions
     # ----------------------------
-    for region in result["regions"]:
+    for idx, region in enumerate(result["regions"]):
         poly = region["polygon"].astype(np.int32)
         bbox = region["bbox"]
         is_pass = region.get("pass", False)
@@ -80,29 +80,47 @@ def visualize(
         )
 
         # bbox + classification
-        if "class_name" in region and region["class_name"] is not None:
-            x1, y1, x2, y2 = bbox
-            cls_name = region["class_name"]
-            conf = region.get("confidence", 0.0)
+        x1, y1, x2, y2 = bbox
+        cls_name = region.get("class_name", "unknown")
+        conf = region.get("confidence", 0.0)
 
-            cv2.rectangle(
-                vis_img,
-                (x1, y1),
-                (x2, y2),
-                color,
-                1,
-            )
+        cv2.rectangle(
+            vis_img,
+            (x1, y1),
+            (x2, y2),
+            color,
+            1,
+        )
 
-            label = f"{cls_name} {conf:.2f}"
-            cv2.putText(
-                vis_img,
-                label,
-                (x1, max(y1 - 5, 12)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                color,
-                2 if not is_pass else 1,
-            )
+        label = f"{cls_name} {conf:.2f}"
+        cv2.putText(
+            vis_img,
+            label,
+            (x1, max(y1 - 5, 12)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            color,
+            2,
+        )
+
+        # ----------------------------
+        # crops
+        # ----------------------------
+        h, w = image.shape[:2]
+
+        x1c = max(0, x1)
+        y1c = max(0, y1)
+        x2c = min(w, x2)
+        y2c = min(h, y2)
+
+        crop = image[y1c:y2c, x1c:x2c]
+        crops_img.append({
+            "img": crop,
+            "cls_name": cls_name,
+            "conf": conf,
+            "a_score": a_score,
+            "area": area,
+        })
 
     # ----------------------------
     # global anomaly score
@@ -119,7 +137,4 @@ def visualize(
             1,
         )
 
-    if save_path is not None:
-        cv2.imwrite(save_path, vis_img)
-
-    return vis_img
+    return vis_img, crops_img
