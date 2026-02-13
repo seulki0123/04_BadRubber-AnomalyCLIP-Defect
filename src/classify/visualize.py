@@ -7,6 +7,7 @@ def visualize(
     result: Dict[str, Any],         # classify_batch[i]
     alpha: float = 0.5,
     draw_anomaly_map: bool = True,
+    crop_scale: float = 2.0
 ) -> np.ndarray:
     """
     Visualize anomaly regions + classification results.
@@ -109,17 +110,34 @@ def visualize(
         h, w = image.shape[:2]
 
         x1c = max(0, x1)
-        y1c = max(0, y1)
-        x2c = min(w, x2)
-        y2c = min(h, y2)
+        bw = x2 - x1
+        bh = y2 - y1
+        cx = (x1 + x2) / 2
+        cy = (y1 + y2) / 2
 
-        crop = image[y1c:y2c, x1c:x2c]
+        new_bw = bw * crop_scale
+        new_bh = bh * crop_scale
+
+        nx1 = int(cx - new_bw / 2)
+        ny1 = int(cy - new_bh / 2)
+        nx2 = int(cx + new_bw / 2)
+        ny2 = int(cy + new_bh / 2)
+
+        # clamp to image
+        nx1 = max(0, nx1)
+        ny1 = max(0, ny1)
+        nx2 = min(w, nx2)
+        ny2 = min(h, ny2)
+
+        crop = image[ny1:ny2, nx1:nx2]
+
         crops_img.append({
             "img": crop,
             "cls_name": cls_name,
             "conf": conf,
             "a_score": a_score,
             "area": area,
+            "bbox_scaled": (nx1, ny1, nx2, ny2),
         })
 
     # ----------------------------

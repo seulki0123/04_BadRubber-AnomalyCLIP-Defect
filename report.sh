@@ -2,17 +2,15 @@
 
 source venv_py38/bin/activate
 
-# SRC_ROOT="./NAS"
-# DST_ROOT="./NAS_Site_SSBR"
-SRC_ROOT="./tests/datasets"
-DST_ROOT="./tests/_report"
+SRC_ROOT="./NAS_Site_SSBR"
+DST_ROOT="./NAS/_report"
 
-LINE="SSBR"
-GRADE="FFFFF"
+LINE="BR-A"
+GRADE="1208_for-crops"
 
 DATES=(
-  "2025-11-21"
-  # "2025-11-22"
+  "2026-01-10"
+  "2026-02-10"
 )
 
 BATCH_SIZE=9

@@ -46,7 +46,7 @@ def run(src_root, dst_root, line, grade, dates, batch_size=9):
 
                 # result
                 for file, res in zip(file_batch, batch_results):
-                    vis_img, crops_img = visualize(result=res, draw_anomaly_map=False)
+                    vis_img, crops_img = visualize(result=res, draw_anomaly_map=False, crop_scale=2.0)
                     cv2.imwrite(os.path.join(dst_segmentation_dir, f"{file}_inspect-result.jpg"), vis_img)
 
                     for idx, crop in enumerate(crops_img):

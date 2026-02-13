@@ -7,7 +7,7 @@ class MVTecSolver(object):
         'bottle', 'cable', 'capsule', 'carpet', 'grid',
         'hazelnut', 'leather', 'metal_nut', 'pill', 'screw',
         'tile', 'toothbrush', 'transistor', 'wood', 'zipper',
-        'rubber_BR-A_1280', 'rubber_BR-B_1208'
+        'rubber_BR-A_1208', 'rubber_BR-C_1280',
     ]
 
     def __init__(self, root='data/mvtec'):
@@ -48,5 +48,5 @@ class MVTecSolver(object):
             f.write(json.dumps(info, indent=4) + "\n")
         print('normal_samples', normal_samples, 'anomaly_samples', anomaly_samples)
 if __name__ == '__main__':
-    runner = MVTecSolver(root='/remote-home/iot_zhouqihang/data/mvdataset')
+    runner = MVTecSolver(root='/home/s1k2/work/datasets/mvtec_anomaly_detection')
     runner.run()

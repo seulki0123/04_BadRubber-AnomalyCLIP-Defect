@@ -1,14 +1,14 @@
 anomalyclip:
-  checkpoint: ./NAS/anomaly/weights/SSBR/9_12_4_mvtec+F1038-F2150-M2520/epoch_15.pth
-  imgsz: 384 # 32*12
+  checkpoint: ./checkpoints/9_12_4_mvtec_anomaly_detection+BR-A_1208+BR-C_1280/epoch_15.pth
+  imgsz: 512 # 32*12
   threshold: 0.25
-  min_area: 112
+  min_area: 300
 
 classifier:
   checkpoint: ./NAS/classify/weights/SSBR/2550H_imgsz32/weights/best.pt
   imgsz: 32 # 32*1
-  threshold: 0.5
+  threshold: 0.0
 
 bgremover:
-  checkpoint: ./NAS/segment/weights/rmbg/SSBR_F2150-M2520-F1038/weights/best.pt
+  checkpoint: ./NAS/segment/weights/rmbg/all/weights/best.pt
   imgsz: 160 # 32*5

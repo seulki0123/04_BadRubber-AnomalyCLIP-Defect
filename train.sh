@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source venv_py38/bin/activate
+
 # ================== 설정 ==================
 DEVICE=0
 
@@ -10,7 +12,7 @@ T_N_CTX=4
 DATASET=mvtec
 DATA_PATH=./datasets/mvtec_anomaly_detection
 
-BASE_DIR=${DEPTH}_${N_CTX}_${T_N_CTX}_mvtec_anomaly_detection
+BASE_DIR=${DEPTH}_${N_CTX}_${T_N_CTX}_mvtec_anomaly_detection+BR-A_1208+BR-C_1280
 SAVE_DIR=./checkpoints/${BASE_DIR}
 
 # ================== 실행 ==================

@@ -5,8 +5,8 @@
 source venv_py38/bin/activate
 
 # 경로 설정
-$SRC_ROOT = "\\gnict_nas\LG_Chemistry_S1K2"
-$DST_ROOT = "\\gnict_nas\LG_Chemistry_Site"
+$SRC_ROOT = "\\gnict_nas\LG_Chemistry_Site"
+$DST_ROOT = "\\gnict_nas\LG_Chemistry_S1K2\defect\_report"
 
 $LINE  = "SSBR"
 $GRADE = "FFFFF"
