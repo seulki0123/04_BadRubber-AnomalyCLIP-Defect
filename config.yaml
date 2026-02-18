@@ -7,8 +7,13 @@ anomalyclip:
 classifier:
   checkpoint: ./NAS/classify/weights/SSBR/2550H_imgsz32/weights/best.pt
   imgsz: 32 # 32*1
-  threshold: 0.0
+  threshold: 0.8
 
 bgremover:
   checkpoint: ./NAS/segment/weights/rmbg/all/weights/best.pt
   imgsz: 160 # 32*5
+
+show:
+  anomaly_map: true
+  anomaly_score: true
+  foreground: true

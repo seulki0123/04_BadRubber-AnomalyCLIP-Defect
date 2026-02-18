@@ -14,7 +14,7 @@ classes = {
     2: {
         "description": "02_부스러기",
         "name": "debris",
-        "color": (0, 0, 255),
+        "color": (0, 0, 0),
         "pass": True,
     },
     3: {
@@ -32,13 +32,13 @@ classes = {
     5: {
         "description": "05_짝대기",
         "name": "dash",
-        "color": (255, 255, 255),
+        "color": (0, 0, 0),
         "pass": True,
     },
     6: {
         "description": "06_테두리",
         "name": "edge",
-        "color": (255, 255, 255),
+        "color": (0, 0, 0),
         "pass": True,
     },
     7: {
@@ -50,19 +50,19 @@ classes = {
     8: {
         "description": "08_하얀거",
         "name": "white",
-        "color": (255, 255, 255),
+        "color": (0, 0, 0),
         "pass": True,
     },
     9: {
         "description": "09_날개",
         "name": "wings",
-        "color": (255, 255, 255),
+        "color": (0, 0, 0),
         "pass": True,
     },
     10: {
         "description": "10_버블",
         "name": "bubble",   
-        "color": (255, 255, 255),
+        "color": (0, 0, 0),
         "pass": True,
     },
     11: {
@@ -74,7 +74,7 @@ classes = {
     12: {
         "description": "12_길다란부스러기",
         "name": "long_debris",
-        "color": (255, 255, 255),
+        "color": (0, 0, 0),
         "pass": True,
     },
     13: {

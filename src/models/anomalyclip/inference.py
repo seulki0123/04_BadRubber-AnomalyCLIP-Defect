@@ -12,6 +12,7 @@ from argparse import Namespace
 from . import AnomalyCLIP_lib
 from .utils import get_transform, setup_seed
 from .prompt_ensemble import AnomalyCLIP_PromptLearner
+from outputs import AnomalyCLIPOutput
 
 
 ImageNP = np.ndarray  # (H, W, 3)
@@ -33,6 +34,8 @@ class AnomalyCLIPInference:
         sigma: int = 4,
         device: Optional[str] = None,
         DPAM_layer: int = 20,
+        score_threshold: float = 0.25,
+        area_threshold: int = 300,
     ) -> None:
         setup_seed(10)
 
@@ -45,7 +48,9 @@ class AnomalyCLIPInference:
         self.feature_map_layer = feature_map_layer
         self.sigma = sigma
         self.DPAM_layer = DPAM_layer
-
+        self.score_threshold = score_threshold
+        self.area_threshold = area_threshold
+        
         self.device: str = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
         self.model: Optional[torch.nn.Module] = None
@@ -121,7 +126,17 @@ class AnomalyCLIPInference:
         imgs_np: Union[ImageNP, BatchImageNP],
     ) -> torch.Tensor:
         if isinstance(imgs_np, np.ndarray):
-            imgs_np = [imgs_np]
+
+            # single image (H, W, 3)
+            if imgs_np.ndim == 3:
+                imgs_np = [imgs_np]
+
+            # batch image (B, H, W, 3)
+            elif imgs_np.ndim == 4:
+                imgs_np = [imgs_np[i] for i in range(imgs_np.shape[0])]
+
+            else:
+                raise ValueError("Unsupported image shape")
 
         elif not isinstance(imgs_np, (list, tuple)):
             raise TypeError("imgs_np must be an image or a sequence of images")
@@ -194,7 +209,8 @@ class AnomalyCLIPInference:
     def infer(
         self,
         imgs_np: Union[ImageNP, BatchImageNP],
-    ) -> Tuple[AnomalyMap, ScoreArray]:
+        foreground_masks: Optional[np.ndarray] = None,
+    ) -> AnomalyCLIPOutput:
         imgs_tensor = self._load_and_preprocess_images(imgs_np)
 
         with torch.no_grad():
@@ -205,7 +221,13 @@ class AnomalyCLIPInference:
         anomaly_maps = self._compute_anomaly_maps(patch_features)
         image_scores = self._compute_image_scores(image_features)
 
-        return (
-            anomaly_maps.cpu().numpy(),          # (B, H, W)
-            image_scores.cpu().numpy()          # (B,)
+        return AnomalyCLIPOutput(
+            maps=anomaly_maps.cpu().numpy() * (foreground_masks if foreground_masks is not None else 1),
+            score_threshold=self.score_threshold,
+            area_threshold=self.area_threshold,
         )
+
+        # return (
+        #     anomaly_maps.cpu().numpy() * (foreground_masks if foreground_masks is not None else 1),
+        #     image_scores.cpu().numpy(),
+        # )
