@@ -13,7 +13,14 @@ bgremover:
   checkpoint: ./NAS/segment/weights/rmbg/all/weights/best.pt
   imgsz: 160 # 32*5
 
+sam2:
+  checkpoint: ./NAS/segment/weights/sam2.1/sam2.1_hiera_tiny.pt
+  config_name: sam2.1/sam2.1_hiera_t.yaml
+  pred_iou_thresh: 0.0
+  stability_score_thresh: 0.0
+  points_per_side: 1
+
 show:
-  anomaly_map: true
+  anomaly_map: false
   anomaly_score: true
   foreground: true

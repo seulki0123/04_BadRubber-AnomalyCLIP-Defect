@@ -21,7 +21,7 @@ def visualize(
         vis_img = draw_normalized_polygons(
             image=vis_img,
             polygons_n=foreground.polygons_n,
-            color=(0, 255, 0),
+            colors=[(0, 255, 0) for _ in range(len(foreground.polygons_n))],
             thickness=1,
         )
 
@@ -44,7 +44,7 @@ def visualize(
     vis_img = draw_normalized_polygons(
         image=vis_img,
         polygons_n=[region.polygon_n for region in anomaly.regions],
-        color=(0, 0, 255),
+        colors=[region.color for region in classification.regions],
         thickness=1,
     )
 
@@ -58,27 +58,30 @@ def visualize(
     
     return vis_img
 
-
 def draw_normalized_polygons(
     image: np.ndarray,
     polygons_n: Sequence[np.ndarray],
-    color: tuple = (0, 255, 0),
+    labels: Optional[Sequence[str]] = None,
+    colors: Optional[Sequence[tuple]] = None,
     thickness: int = 2,
+    font_scale: float = 0.5,
+    font_thickness: int = 1,
     closed: bool = True,
 ) -> np.ndarray:
-    """
-    Draw normalized (0~1) polygons on image.
 
-    polygons_n: list of (N,2) normalized polygons
-    """
     vis_img = image.copy()
     H, W = vis_img.shape[:2]
 
-    for poly_n in polygons_n:
+    if colors is None:
+        colors = [(0, 255, 0)] * len(polygons_n)
+
+    for i, poly_n in enumerate(polygons_n):
         if poly_n.size == 0:
             continue
 
-        poly_px = poly_n.copy()
+        color = colors[i] if i < len(colors) else (0, 255, 0)
+
+        poly_px = poly_n.astype(np.float32).copy()
         poly_px[:, 0] *= W
         poly_px[:, 1] *= H
         poly_px = poly_px.astype(np.int32)
@@ -90,6 +93,16 @@ def draw_normalized_polygons(
             color=color,
             thickness=thickness,
         )
+
+        if labels is not None and i < len(labels):
+            draw_label(
+                image=vis_img,
+                text=str(labels[i]),
+                origin=tuple(poly_px[0]),   # 첫 vertex
+                color=color,
+                font_scale=font_scale,
+                font_thickness=font_thickness,
+            )
 
     return vis_img
 
@@ -115,78 +128,52 @@ def draw_anomaly_map(
 
 def draw_bboxes_xyxyn(
     image: np.ndarray,
-    bboxes_xyxyn: Sequence[Sequence[float]],  # [(x1,y1,x2,y2), ...] normalized
+    bboxes_xyxyn: Sequence[Sequence[float]],
     labels: Optional[Sequence[str]] = None,
     colors: Sequence[tuple] = (0, 0, 255),
     thickness: int = 2,
     font_scale: float = 0.5,
     font_thickness: int = 1,
 ) -> np.ndarray:
-    """
-    Draw normalized (x1, y1, x2, y2) bounding boxes with optional labels.
-    Coordinates must be in range [0, 1].
-    """
 
-    H, W = image.shape[:2]
+    vis_img = image.copy()
+    H, W = vis_img.shape[:2]
 
     for i, box in enumerate(bboxes_xyxyn):
         x1n, y1n, x2n, y2n = box
 
-        # convert to pixel
         x1 = int(x1n * W)
         y1 = int(y1n * H)
         x2 = int(x2n * W)
         y2 = int(y2n * H)
 
-        # clamp
         x1 = max(0, min(W - 1, x1))
         y1 = max(0, min(H - 1, y1))
         x2 = max(0, min(W - 1, x2))
         y2 = max(0, min(H - 1, y2))
 
-        # rectangle
+        color = colors[i] if i < len(colors) else (0, 0, 255)
+
         cv2.rectangle(
-            image,
+            vis_img,
             (x1, y1),
             (x2, y2),
-            colors[i],
+            color,
             thickness,
         )
 
-        # label
-        if labels is not None:
-            label = str(labels[i])
-
-            (tw, th), baseline = cv2.getTextSize(
-                label,
-                cv2.FONT_HERSHEY_SIMPLEX,
-                font_scale,
-                font_thickness,
+        if labels is not None and i < len(labels):
+            draw_label(
+                image=vis_img,
+                text=str(labels[i]),
+                origin=(x1, y1),
+                color=color,
+                font_scale=font_scale,
+                font_thickness=font_thickness,
             )
 
-            text_y = max(0, y1 - th - baseline - 4)
+    return vis_img
 
-            # background
-            cv2.rectangle(
-                image,
-                (x1, text_y),
-                (x1 + tw + 4, y1),
-                colors[i],
-                -1,
-            )
-
-            cv2.putText(
-                image,
-                label,
-                (x1 + 2, y1 - 2),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                font_scale,
-                (255, 255, 255),
-                font_thickness,
-                cv2.LINE_AA,
-            )
-
-    return image
 
 def put_text_box(
     image: np.ndarray,
@@ -279,3 +266,68 @@ def put_text_box(
     )
 
     return vis
+
+def draw_label(
+    image: np.ndarray,
+    text: str,
+    origin: tuple,              # (x, y) pixel
+    color: tuple,
+    font_scale: float = 0.5,
+    font_thickness: int = 1,
+) -> None:
+    """
+    Draw label with colored background at given pixel position.
+    Keeps label fully inside image boundary.
+    Modifies image in-place.
+    """
+
+    H, W = image.shape[:2]
+    x, y = origin
+
+    (tw, th), baseline = cv2.getTextSize(
+        text,
+        cv2.FONT_HERSHEY_SIMPLEX,
+        font_scale,
+        font_thickness,
+    )
+
+    # 기본적으로 위쪽에 표시
+    text_y = y - th - baseline - 4
+
+    # 위로 못 올리면 아래로
+    if text_y < 0:
+        text_y = y + 4
+
+    box_x1 = x
+    box_y1 = text_y
+    box_x2 = x + tw + 4
+    box_y2 = text_y + th + baseline + 4
+
+    box_x1 = max(0, min(W - 1, box_x1))
+    box_y1 = max(0, min(H - 1, box_y1))
+    box_x2 = max(0, min(W - 1, box_x2))
+    box_y2 = max(0, min(H - 1, box_y2))
+
+    # 배경 박스
+    cv2.rectangle(
+        image,
+        (box_x1, box_y1),
+        (box_x2, box_y2),
+        color,
+        -1,
+    )
+
+    # 텍스트 위치 재계산
+    text_x = box_x1 + 2
+    text_y = box_y2 - baseline - 2
+
+    cv2.putText(
+        image,
+        text,
+        (text_x, text_y),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        font_scale,
+        (255, 255, 255),
+        font_thickness,
+        cv2.LINE_AA,
+    )
