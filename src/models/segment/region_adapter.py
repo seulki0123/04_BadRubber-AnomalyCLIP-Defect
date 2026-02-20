@@ -4,6 +4,7 @@ import numpy as np
 from outputs import RegionSegmentationOutput, Segmentation
 from outputs.anomalyclip import AnomalyCLIPOutput
 from outputs.classify import RegionClassificationOutput
+from utils import scale_bbox_xyxy_n
 from .inference import Segmenter
 
 
@@ -33,7 +34,7 @@ class RegionSegmenterAdapter:
                 # if region_cls.is_pass:
                 #     continue
                 
-                x1n, y1n, x2n, y2n = region.bboxes_xyxy_n
+                x1n, y1n, x2n, y2n = scale_bbox_xyxy_n(region.bboxes_xyxy_n, scale=2.0)
                 
 
                 x1, y1 = int(x1n * W), int(y1n * H)
