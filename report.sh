@@ -2,14 +2,14 @@
 
 source venv_py310/bin/activate
 
-SRC_ROOT="./NAS_Site_SSBR"
-DST_ROOT="./NAS/_report"
+SRC_ROOT="/home/s1k2/04_BadRubber/datasets/raw"
+DST_ROOT="/home/s1k2/04_BadRubber/datasets/processed"
 
 LINE="BR-A"
-GRADE="1208_for-crops"
+GRADE="unknown"
 
 DATES=(
-  "2026-02-19"
+  "2026-02-18"
 )
 
 BATCH_SIZE=9

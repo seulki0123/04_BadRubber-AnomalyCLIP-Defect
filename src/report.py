@@ -51,14 +51,12 @@ def run(src_root, dst_root, line, grade, dates, batch_size=9):
                 for result in results:
                     # result image
                     imagename = os.path.basename(result.image_path)
-                    cv2.imwrite(os.path.join(dst_result_image_dir, f"{imagename}.jpg"), result.visualize())
-
+                    # cv2.imwrite(os.path.join(dst_result_image_dir, f"{imagename}.jpg"), result.visualize())
                     crops, metadata = crop_regions(
                         image=result.image,
                         imagename=imagename,
                         crop_sources=result.anomaly.regions,
                         polygon_sources=result.segmentation.regions,
-                        draw_polygon=True,
                     )
                     with open(os.path.join(dst_result_meta_dir, f"{imagename}.json"), "w", encoding="utf-8") as f:
                         json.dump(metadata, f, indent=4)
