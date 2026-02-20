@@ -13,6 +13,11 @@ bgremover:
   checkpoint: ./NAS/segment/weights/rmbg/all/weights/best.pt
   imgsz: 160 # 32*5
 
+segmenter:
+  checkpoint: ./NAS/segment/weights/yolo_seg/BR-A_1208_BR-C_1280/weights/best.pt
+  imgsz: 224 # 32*7
+  threshold: 0.0
+
 sam2:
   checkpoint: ./NAS/segment/weights/sam2.1/sam2.1_hiera_tiny.pt
   config_name: sam2.1/sam2.1_hiera_t.yaml

@@ -14,7 +14,7 @@ class RegionClassifierAdapter:
     def __init__(self, classifier: Classifier):
         self.classifier = classifier
 
-    def classify(
+    def infer(
         self,
         images: List[np.ndarray],
         anomaly: AnomalyCLIPOutput,

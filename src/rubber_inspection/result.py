@@ -7,6 +7,8 @@ from outputs import (
     AnomalyCLIPOutput,
     RegionClassificationOutput,
     ClassificationBatchItem,
+    RegionSegmentationOutput,
+    SegmentationBatchItem,
     AnomalyCLIPBatchItem,
     ForegroundMaskBatchItem,
 )
@@ -25,6 +27,7 @@ class InspectorBatchItem:
     foreground: ForegroundMaskBatchItem
     anomaly: AnomalyCLIPBatchItem
     classification: ClassificationBatchItem
+    segmentation: SegmentationBatchItem
 
     @property
     def regions(self):
@@ -36,6 +39,7 @@ class InspectorBatchItem:
             foreground=self.foreground,
             anomaly=self.anomaly,
             classification=self.classification,
+            segmentation=self.segmentation,
             show_foreground=vis_show_cfg["foreground"],
             show_anomaly_map=vis_show_cfg["anomaly_map"],
             show_anomaly_score=vis_show_cfg["anomaly_score"],
@@ -53,7 +57,8 @@ class InspectorOutput:
     foreground: ForegroundMaskOutput
     anomaly: AnomalyCLIPOutput
     classification: RegionClassificationOutput
-
+    segmentation: RegionSegmentationOutput
+    
     def __post_init__(self):
         B = len(self.images)
 
@@ -65,6 +70,9 @@ class InspectorOutput:
 
         if len(self.classification) != B:
             raise ValueError("Classification batch size mismatch")
+
+        if len(self.segmentation) != B:
+            raise ValueError("Segmentation batch size mismatch")
 
     def __len__(self):
         return len(self.images)
@@ -80,4 +88,5 @@ class InspectorOutput:
             foreground=self.foreground[idx],
             anomaly=self.anomaly[idx],
             classification=self.classification[idx],
+            segmentation=self.segmentation[idx],
         )

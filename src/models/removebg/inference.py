@@ -18,7 +18,7 @@ class BackgroundRemover:
         self,
         batch_size: int = 1,
     ) -> None:
-        for _ in tqdm.tqdm(range(10), desc="Warm up YOLO segmentation model"):
+        for _ in tqdm.tqdm(range(10), desc="Warm up YOLO segmentation model for background remover"):
             dummy_images = [
                 np.zeros((self.imgsz, self.imgsz, 3), dtype=np.uint8)
                 for _ in range(batch_size)

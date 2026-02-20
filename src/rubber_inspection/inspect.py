@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 import cv2
 
-from models import AnomalyCLIPInference, BackgroundRemover, Classifier, RegionClassifierAdapter, SAM2Inference
+from models import AnomalyCLIPInference, BackgroundRemover, Classifier, RegionClassifierAdapter, Segmenter, RegionSegmenterAdapter
 from outputs import RegionClassificationOutput
 from utils import load_config, random_color
 from .result import InspectorOutput
@@ -31,16 +31,16 @@ class Inspector:
             Classifier(
             checkpoint_path=config["classifier"]["checkpoint"],
             imgsz=config["classifier"]["imgsz"],
-            conf_threshold=config["classifier"].get("threshold", 0.5),
+            conf_threshold=config["classifier"]["threshold"],
             )
         )
 
-        self.sam2 = SAM2Inference(
-            checkpoint_path=config["sam2"]["checkpoint"],
-            config_name=config["sam2"]["config_name"],
-            pred_iou_thresh=config["sam2"]["pred_iou_thresh"],
-            stability_score_thresh=config["sam2"]["stability_score_thresh"],
-            points_per_side=config["sam2"]["points_per_side"],
+        self.region_segmenter = RegionSegmenterAdapter(
+            Segmenter(
+            checkpoint_path=config["segmenter"]["checkpoint"],
+            imgsz=config["segmenter"]["imgsz"],
+            conf_threshold=config["segmenter"]["threshold"],
+            )
         )
 
     # ---------------------------------
@@ -60,17 +60,17 @@ class Inspector:
         anomaly = self.anomaly_extractor.infer(images, foreground.masks)
         t3 = time.time()
         
-        classification = self.region_classifier.classify(images, anomaly)
+        classification = self.region_classifier.infer(images, anomaly)
         t4 = time.time()
 
-        sam2_output = self.sam2.infer(images, anomaly.regions, visualize=True)
+        segmentation = self.region_segmenter.infer(images, anomaly, classification)
         t5 = time.time()
 
         print(f"load images: {(t1-t0)*1000}ms")
         print(f"foreground: {(t2-t1)*1000}ms")
         print(f"anomaly: {(t3-t2)*1000}ms")
         print(f"classification: {(t4-t3)*1000}ms")
-        print(f"SAM2: {(t5-t4)*1000}ms")
+        print(f"segmentation: {(t5-t4)*1000}ms")
         print(f"image count: {len(images)}")
         print(f"total: {(t5-t0)*1000}ms")
         print(f"time per image: {(t5-t0)*1000/len(images)}ms")
@@ -81,4 +81,5 @@ class Inspector:
             foreground=foreground,
             anomaly=anomaly,
             classification=classification,
+            segmentation=segmentation,
         )
