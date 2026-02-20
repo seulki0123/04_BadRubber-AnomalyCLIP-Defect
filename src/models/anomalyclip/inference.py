@@ -4,6 +4,7 @@ from typing import List, Tuple, Sequence, Optional, Union
 import cv2
 import tqdm
 import torch
+import torch.nn.functional as F
 import numpy as np
 from PIL import Image
 from scipy.ndimage import gaussian_filter
@@ -203,6 +204,29 @@ class AnomalyCLIPInference:
 
         return probs[:, 1].detach()
 
+    def _resize_to_original(
+        self,
+        anomaly_maps: torch.Tensor,
+        original_sizes: List[Tuple[int, int]],
+    ) -> torch.Tensor:
+        """
+        Resize anomaly maps (B, H, W) → original image sizes
+        """
+        import torch.nn.functional as F
+
+        resized_maps = []
+
+        for i, (h, w) in enumerate(original_sizes):
+            resized = F.interpolate(
+                anomaly_maps[i].unsqueeze(0).unsqueeze(0),
+                size=(h, w),
+                mode="bilinear",
+                align_corners=False,
+            )
+            resized_maps.append(resized.squeeze())
+
+        return torch.stack(resized_maps)
+
     # ------------------------------------------------
     # Public API
     # ------------------------------------------------
@@ -211,6 +235,11 @@ class AnomalyCLIPInference:
         imgs_np: Union[ImageNP, BatchImageNP],
         foreground_masks: Optional[np.ndarray] = None,
     ) -> AnomalyCLIPOutput:
+        if isinstance(imgs_np, np.ndarray) and imgs_np.ndim == 3:
+            original_sizes = [imgs_np.shape[:2]]
+        else:
+            original_sizes = [img.shape[:2] for img in imgs_np]
+
         imgs_tensor = self._load_and_preprocess_images(imgs_np)
 
         with torch.no_grad():
@@ -219,15 +248,10 @@ class AnomalyCLIPInference:
             )
 
         anomaly_maps = self._compute_anomaly_maps(patch_features)
-        image_scores = self._compute_image_scores(image_features)
+        resized_maps = self._resize_to_original(anomaly_maps, original_sizes)
 
         return AnomalyCLIPOutput(
-            maps=anomaly_maps.cpu().numpy() * (foreground_masks if foreground_masks is not None else 1),
+            maps=resized_maps.cpu().numpy() * (foreground_masks if foreground_masks is not None else 1),
             score_threshold=self.score_threshold,
             area_threshold=self.area_threshold,
         )
-
-        # return (
-        #     anomaly_maps.cpu().numpy() * (foreground_masks if foreground_masks is not None else 1),
-        #     image_scores.cpu().numpy(),
-        # )

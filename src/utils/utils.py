@@ -1,5 +1,6 @@
+import hashlib
 import random
-from typing import Tuple
+from typing import Tuple, Optional
 
 import cv2
 import numpy as np
@@ -75,3 +76,37 @@ def random_color(
             random.randint(0, 255),
             random.randint(0, 255),
         )
+
+def compute_image_hash(img: np.ndarray) -> str:
+    return hashlib.md5(img.tobytes()).hexdigest()
+
+def save_polygons_to_yolo_format(
+    save_path: str,
+    polygons: list,
+    class_ids: list,
+) -> None:
+
+    if not polygons:
+        return
+
+    lines = []
+
+    for polygon_n, class_id in zip(polygons, class_ids):
+
+        if polygon_n is None:
+            continue
+
+        polygon_n = np.asarray(polygon_n, dtype=np.float32)
+
+        if polygon_n.ndim != 2 or polygon_n.shape[0] < 3:
+            continue
+
+        coords = polygon_n.reshape(-1)
+        coord_str = " ".join(f"{c:.6f}" for c in coords)
+        lines.append(f"{class_id} {coord_str}")
+
+    if not lines:
+        return
+
+    with open(save_path, "w") as f:
+        f.write("\n".join(lines))

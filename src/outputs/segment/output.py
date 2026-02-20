@@ -6,19 +6,25 @@ import numpy as np
 @dataclass
 class Segmentation:
     __slots__ = (
+        "polygon",
         "polygon_n",
+        "bboxes_xyxy",
         "bboxes_xyxy_n",
         "confidence",
         "area",
+        "area_n",
         "class_id",
         "class_name",
         "color",
     )
 
+    polygon: np.ndarray
     polygon_n: np.ndarray
+    bboxes_xyxy: Tuple[int, int, int, int]
     bboxes_xyxy_n: Tuple[float, float, float, float]
     confidence: float
     area: float
+    area_n: float
     class_id: int
     class_name: str
     color: Tuple[int, int, int]
@@ -27,39 +33,32 @@ class Segmentation:
 class SegmentationBatchItem:
     __slots__ = ("regions",)
 
-    regions: List[Segmentation]
+    # regions = [ [S], [S], ... ]  (R개)
+    regions: List[List[Segmentation]]
 
     def __len__(self):
-        return len(self.regions)
+        return len(self.regions)  # R
 
     def __iter__(self):
         return iter(self.regions)
 
-    def __getitem__(self, idx: int) -> Segmentation:
+    def __getitem__(self, idx: int) -> List[Segmentation]:
         return self.regions[idx]
+
 
 @dataclass
 class SegmentationOutput:
     __slots__ = ("batch_regions",)
 
-    batch_regions: List[List[Segmentation]]  # [B][R]
+    # [B][R][S]
+    batch_regions: List[List[List[Segmentation]]]
 
     def __post_init__(self):
-        self._validate_inputs()
-
-    def _validate_inputs(self):
         if not isinstance(self.batch_regions, list):
-            raise TypeError("batch must be List[List[Segmentation]]")
-
-        for regions in self.batch_regions:
-            if not isinstance(regions, list):
-                raise TypeError("Each batch item must be List[Segmentation]")
-            for r in regions:
-                if not isinstance(r, Segmentation):
-                    raise TypeError("Elements must be Segmentation")
+            raise TypeError("batch_regions must be List[List[List[Segmentation]]]")
 
     def __len__(self):
-        return len(self.batch_regions)
+        return len(self.batch_regions)  # B
 
     def __iter__(self) -> Iterator[SegmentationBatchItem]:
         for regions in self.batch_regions:

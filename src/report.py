@@ -1,10 +1,11 @@
 import os
+import json
 import argparse
 
 import cv2
 import tqdm
 
-from utils import Report
+from utils import Report, save_polygons_to_yolo_format
 from rubber_inspection import Inspector, crop_regions
 
 def batch(iterable, batch_size):
@@ -20,13 +21,15 @@ def run(src_root, dst_root, line, grade, dates, batch_size=9):
         src_dir = os.path.join(src_root, line, date)
         dst_dir = os.path.join(dst_root, line, grade, date)
 
-        dst_segmentation_dir = os.path.join(dst_dir, "segmentation")
-        dst_crops_anomaly_dir = os.path.join(dst_dir, "crops_anomaly")
-        dst_crops_segmentation_dir = os.path.join(dst_dir, "crops_segmentation")
-        os.makedirs(dst_segmentation_dir, exist_ok=True)
-        os.makedirs(dst_crops_anomaly_dir, exist_ok=True)
-        os.makedirs(dst_crops_segmentation_dir, exist_ok=True)
-
+        dst_result_image_dir = os.path.join(dst_dir, "results", "images")
+        dst_result_meta_dir = os.path.join(dst_dir, "results", "metadatas")
+        dst_crop_images_dir = os.path.join(dst_dir, "crops", "images")
+        dst_crop_labels_dir = os.path.join(dst_dir, "crops", "labels")
+        os.makedirs(dst_result_image_dir, exist_ok=True)
+        os.makedirs(dst_result_meta_dir, exist_ok=True)
+        os.makedirs(dst_crop_images_dir, exist_ok=True)
+        os.makedirs(dst_crop_labels_dir, exist_ok=True)
+        
         cams = [
             d for d in tqdm.tqdm(os.listdir(src_dir), desc=f"Loading {date} {line} {grade} cams")
             if os.path.isdir(os.path.join(src_dir, d))
@@ -48,29 +51,20 @@ def run(src_root, dst_root, line, grade, dates, batch_size=9):
                 for result in results:
                     # result image
                     imagename = os.path.basename(result.image_path)
-                    cv2.imwrite(os.path.join(dst_segmentation_dir, f"{imagename}_inspect-result.jpg"), result.visualize())
-                    
-                    # anomaly crop images
-                    anomaly_crops = crop_regions(result.image, result.anomaly.regions, result.anomaly_cls.regions, prefix="anomaly", name_from="cls")
-                    for filename, crop in anomaly_crops.items():
-                        cv2.imwrite(os.path.join(dst_crops_anomaly_dir, f"{filename}_{imagename}"), crop)
+                    cv2.imwrite(os.path.join(dst_result_image_dir, f"{imagename}.jpg"), result.visualize())
 
-                    anomaly_crops = crop_regions(result.image, result.anomaly.regions, result.anomaly_cls.regions, prefix="anomaly", name_from="cls", draw_polygon=True)
-                    for filename, crop in anomaly_crops.items():
-                        cv2.imwrite(os.path.join(dst_crops_anomaly_dir, f"{filename}_{imagename}_polygon.jpg"), crop)
-                    
-                    # segmentation crop images
-                    segmentation_crops = crop_regions(result.image, result.segmentation.regions, result.segmentation_cls.regions, prefix="segment", name_from="region")
-                    for filename, crop in segmentation_crops.items():
-                        cv2.imwrite(os.path.join(dst_crops_segmentation_dir, f"{filename}_{imagename}"), crop)
-
-                    segmentation_crops = crop_regions(result.image, result.segmentation.regions, result.segmentation_cls.regions, prefix="segment", name_from="region", draw_polygon=True)
-                    for filename, crop in segmentation_crops.items():
-                        cv2.imwrite(os.path.join(dst_crops_segmentation_dir, f"{filename}_{imagename}_polygon.jpg"), crop)
-                        
-                    # report.update([i["class_name"] for i in res["regions"] if not i["pass"]])
-                
-                # report.print_report()
+                    crops, metadata = crop_regions(
+                        image=result.image,
+                        imagename=imagename,
+                        crop_sources=result.anomaly.regions,
+                        polygon_sources=result.segmentation.regions,
+                        draw_polygon=True,
+                    )
+                    with open(os.path.join(dst_result_meta_dir, f"{imagename}.json"), "w", encoding="utf-8") as f:
+                        json.dump(metadata, f, indent=4)
+                    for filename, (crop, segmentations) in crops.items():
+                        cv2.imwrite(os.path.join(dst_crop_images_dir, f"{filename}.jpg"), crop)
+                        save_polygons_to_yolo_format(os.path.join(dst_crop_labels_dir, f"{filename}.txt"), [seg["polygon"] for seg in segmentations], [seg["class_id"] for seg in segmentations])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

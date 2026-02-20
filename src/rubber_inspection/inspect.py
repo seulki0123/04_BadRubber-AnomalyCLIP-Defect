@@ -4,7 +4,7 @@ from typing import List, Tuple
 import cv2
 
 from models import AnomalyCLIPInference, BackgroundRemover, Classifier, RegionClassifierAdapter, Segmenter, RegionSegmenterAdapter
-from outputs import RegionClassificationOutput
+from outputs import RegionClassificationOutput, ClassificationBatchItem
 from utils import load_config, random_color
 from .result import InspectorOutput
 from .visualize import draw_normalized_polygons
@@ -13,11 +13,9 @@ class Inspector:
     def __init__(self):
         config = load_config()
 
-        self.imgsz = config["anomalyclip"]["imgsz"]
-
         self.anomaly_extractor = AnomalyCLIPInference(
             checkpoint_path=config["anomalyclip"]["checkpoint"],
-            imgsz=self.imgsz,
+            imgsz=config["anomalyclip"]["imgsz"],
             score_threshold=config["anomalyclip"]["threshold"],
             area_threshold=config["anomalyclip"]["min_area"],
         )
@@ -51,7 +49,6 @@ class Inspector:
         t0 = time.time()
 
         images = [cv2.imread(p) for p in imgs_path]
-        images = [cv2.resize(img, (self.imgsz, self.imgsz)) for img in images]
         t1 = time.time()
 
         foreground = self.bgremover.infer(images)
@@ -66,7 +63,7 @@ class Inspector:
         segmentation = self.region_segmenter.infer(images, anomaly, anomaly_cls)
         t5 = time.time()
 
-        segmentation_cls = self.region_classifier.infer(images, segmentation)
+        segmentation_cls = [ClassificationBatchItem(regions=[]) for _ in range(len(images))]
         t6 = time.time()
 
         print(f"load images: {(t1-t0)*1000}ms")

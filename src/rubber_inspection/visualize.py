@@ -64,22 +64,23 @@ def visualize(
     )
     
     # draw segmentation regions
+    seg_regions = [seg for region in segmentation.regions for seg in region]
     vis_img = draw_normalized_polygons(
         image=vis_img,
-        polygons_n=[region.polygon_n for region in segmentation.regions],
-        labels=[f"{region.class_name} {region.confidence:.2f}" for region in segmentation.regions],
-        colors=[region.color for region in segmentation.regions],
+        polygons_n=[region.polygon_n for region in seg_regions],
+        labels=[f"{region.class_name} {region.confidence:.2f}" for region in seg_regions],
+        colors=[region.color for region in seg_regions],
         thickness=1,
     )
 
     # draw segmentation region bboxes
-    vis_img = draw_bboxes_xyxyn(
-        image=vis_img,
-        bboxes_xyxyn=[region.bboxes_xyxy_n for region in segmentation.regions],
-        labels=[f"{region.class_name} {region.confidence:.2f}" for region in segmentation_cls.regions],
-        colors=[region.color for region in segmentation_cls.regions],
-        thickness=1,
-    )
+    # vis_img = draw_bboxes_xyxyn(
+    #     image=vis_img,
+    #     bboxes_xyxyn=[region.bboxes_xyxy_n for region in segmentation.regions],
+    #     labels=[f"{region.class_name} {region.confidence:.2f}" for region in segmentation_cls.regions],
+    #     colors=[region.color for region in segmentation_cls.regions],
+    #     thickness=1,
+    # )
 
     return vis_img
 

@@ -64,10 +64,21 @@ class Segmenter:
                 polygon_global = polygon_patch.copy()
                 polygon_global[:, 0] += x1
                 polygon_global[:, 1] += y1
+                polygon_global = polygon_global.astype(np.float32)
 
                 polygon_n = polygon_global.copy()
                 polygon_n[:, 0] /= W
                 polygon_n[:, 1] /= H
+
+                xmin, ymin = polygon_global.min(axis=0)
+                xmax, ymax = polygon_global.max(axis=0)
+
+                bbox_xyxy = (
+                    int(xmin),
+                    int(ymin),
+                    int(xmax),
+                    int(ymax),
+                )
 
                 xmin_n, ymin_n = polygon_n.min(axis=0)
                 xmax_n, ymax_n = polygon_n.max(axis=0)
@@ -78,17 +89,20 @@ class Segmenter:
                     max(0.0, min(1.0, float(xmax_n))),
                     max(0.0, min(1.0, float(ymax_n))),
                 )
-                
-                area = cv2.contourArea(polygon_global.astype(np.float32))
-                
+
+                area = cv2.contourArea(polygon_global)
+                area_n = area / float(W * H)
                 cls_id = int(cls_id)
 
                 region_segments.append(
                     Segmentation(
+                        polygon=polygon_global,
                         polygon_n=polygon_n,
+                        bboxes_xyxy=bbox_xyxy,
                         bboxes_xyxy_n=bboxes_xyxy_n,
                         confidence=conf,
                         area=area,
+                        area_n=area_n,
                         class_id=cls_id,
                         class_name=self.model.names[cls_id],
                         color=(0, 255, 0),

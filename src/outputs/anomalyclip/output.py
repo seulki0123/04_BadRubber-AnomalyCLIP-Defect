@@ -7,16 +7,22 @@ import numpy as np
 @dataclass
 class AnomalyRegion:
     __slots__ = (
+        "polygon",
         "polygon_n",
+        "bboxes_xyxy",
         "bboxes_xyxy_n",
         "anomaly_score",
         "area",
+        "area_n"
     )
 
+    polygon: np.ndarray
     polygon_n: np.ndarray            # (N, 2) float32 normalized
+    bboxes_xyxy: Tuple[int, int, int, int]
     bboxes_xyxy_n: Tuple[float, float, float, float]
     anomaly_score: float
     area: float
+    area_n: float
 
 @dataclass
 class AnomalyCLIPBatchItem:
@@ -103,6 +109,7 @@ class AnomalyCLIPOutput:
             area = float(cv2.contourArea(cnt))
             if area < self.area_threshold:
                 continue
+            area_n = area / float(H * W)
 
             polygon = cnt.reshape(-1, 2).astype(np.int32)
 
@@ -111,7 +118,7 @@ class AnomalyCLIPOutput:
             polygon_n[:, 1] = np.clip(polygon_n[:, 1] / H, 0.0, 1.0)
 
             x, y, w, h = cv2.boundingRect(cnt)
-            bbox = (x, y, x + w, y + h)
+            bbox_xyxy = (x, y, x + w, y + h)
 
             bboxes_xyxy_n = (
                 max(0.0, min(1.0, x / W)),
@@ -124,10 +131,13 @@ class AnomalyCLIPOutput:
 
             regions.append(
                 AnomalyRegion(
+                    polygon=polygon,
                     polygon_n=polygon_n,
+                    bboxes_xyxy=bbox_xyxy,
                     bboxes_xyxy_n=bboxes_xyxy_n,
                     anomaly_score=score,
                     area=area,
+                    area_n=area_n,
                 )
             )
 
