@@ -60,26 +60,31 @@ class Inspector:
         anomaly = self.anomaly_extractor.infer(images, foreground.masks)
         t3 = time.time()
         
-        classification = self.region_classifier.infer(images, anomaly)
+        anomaly_cls = self.region_classifier.infer(images, anomaly)
         t4 = time.time()
 
-        segmentation = self.region_segmenter.infer(images, anomaly, classification)
+        segmentation = self.region_segmenter.infer(images, anomaly, anomaly_cls)
         t5 = time.time()
+
+        segmentation_cls = self.region_classifier.infer(images, segmentation)
+        t6 = time.time()
 
         print(f"load images: {(t1-t0)*1000}ms")
         print(f"foreground: {(t2-t1)*1000}ms")
         print(f"anomaly: {(t3-t2)*1000}ms")
-        print(f"classification: {(t4-t3)*1000}ms")
+        print(f"anomaly_cls: {(t4-t3)*1000}ms")
         print(f"segmentation: {(t5-t4)*1000}ms")
+        print(f"segmentation_cls: {(t6-t5)*1000}ms")
         print(f"image count: {len(images)}")
-        print(f"total: {(t5-t0)*1000}ms")
-        print(f"time per image: {(t5-t0)*1000/len(images)}ms")
+        print(f"total: {(t6-t0)*1000}ms")
+        print(f"time per image: {(t6-t0)*1000/len(images)}ms")
 
         return InspectorOutput(
             images=images,
             images_path=imgs_path,
             foreground=foreground,
             anomaly=anomaly,
-            classification=classification,
+            anomaly_cls=anomaly_cls,
             segmentation=segmentation,
+            segmentation_cls=segmentation_cls,
         )

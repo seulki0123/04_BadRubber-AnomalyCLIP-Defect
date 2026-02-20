@@ -24,7 +24,7 @@ class RegionClassifierAdapter:
         patches = []
         mapping: List[Tuple[int, int]] = []
 
-        for b_idx, (img, regions) in enumerate(zip(images, anomaly.regions)):
+        for b_idx, (img, regions) in enumerate(zip(images, anomaly.batch_regions)):
             H, W = img.shape[:2]
 
             for r_idx, region in enumerate(regions):
@@ -47,7 +47,7 @@ class RegionClassifierAdapter:
 
         batch_out = [
             [None] * len(regions)
-            for regions in anomaly.regions
+            for regions in anomaly.batch_regions
         ]
 
         for (b_idx, r_idx), cls in zip(mapping, results):

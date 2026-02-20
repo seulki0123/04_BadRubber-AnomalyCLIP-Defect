@@ -1,6 +1,8 @@
 from typing import List, Sequence, Tuple
-import numpy as np
+
+import cv2
 import tqdm
+import numpy as np
 from ultralytics import YOLO
 
 from outputs import Segmentation
@@ -67,14 +69,28 @@ class Segmenter:
                 polygon_n[:, 0] /= W
                 polygon_n[:, 1] /= H
 
+                xmin_n, ymin_n = polygon_n.min(axis=0)
+                xmax_n, ymax_n = polygon_n.max(axis=0)
+
+                bboxes_xyxy_n = (
+                    max(0.0, min(1.0, float(xmin_n))),
+                    max(0.0, min(1.0, float(ymin_n))),
+                    max(0.0, min(1.0, float(xmax_n))),
+                    max(0.0, min(1.0, float(ymax_n))),
+                )
+                
+                area = cv2.contourArea(polygon_global.astype(np.float32))
+                
                 cls_id = int(cls_id)
 
                 region_segments.append(
                     Segmentation(
+                        polygon_n=polygon_n,
+                        bboxes_xyxy_n=bboxes_xyxy_n,
+                        confidence=conf,
+                        area=area,
                         class_id=cls_id,
                         class_name=self.model.names[cls_id],
-                        confidence=conf,
-                        polygon_n=polygon_n,
                         color=(0, 255, 0),
                     )
                 )

@@ -1,7 +1,7 @@
 from typing import List, Tuple
 import numpy as np
 
-from outputs import RegionSegmentationOutput, Segmentation
+from outputs import SegmentationOutput, Segmentation
 from outputs.anomalyclip import AnomalyCLIPOutput
 from outputs.classify import RegionClassificationOutput
 from utils import scale_bbox_xyxy_n
@@ -10,7 +10,7 @@ from .inference import Segmenter
 
 class RegionSegmenterAdapter:
     """
-    AnomalyCLIPOutput → RegionSegmentationOutput (flattened per image)
+    AnomalyCLIPOutput → SegmentationOutput (flattened per image)
     """
 
     def __init__(self, segmenter: Segmenter):
@@ -21,13 +21,13 @@ class RegionSegmenterAdapter:
         images: List[np.ndarray],
         anomaly: AnomalyCLIPOutput,
         classifications: RegionClassificationOutput,
-    ) -> RegionSegmentationOutput:
+    ) -> SegmentationOutput:
 
         patches = []
         mapping: List[int] = []
         offsets: List[Tuple[int, int, int, int]] = []
 
-        for b_idx, (img, regions) in enumerate(zip(images, anomaly.regions)):
+        for b_idx, (img, regions) in enumerate(zip(images, anomaly.batch_regions)):
             H, W = img.shape[:2]
 
             for region, region_cls in zip(regions, classifications[b_idx].regions):
@@ -60,4 +60,4 @@ class RegionSegmenterAdapter:
         for img_idx, segs in zip(mapping, results):
             batch_out[img_idx].extend(segs)
 
-        return RegionSegmentationOutput(batch_out)
+        return SegmentationOutput(batch_out)

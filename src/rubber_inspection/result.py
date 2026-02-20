@@ -7,7 +7,7 @@ from outputs import (
     AnomalyCLIPOutput,
     RegionClassificationOutput,
     ClassificationBatchItem,
-    RegionSegmentationOutput,
+    SegmentationOutput,
     SegmentationBatchItem,
     AnomalyCLIPBatchItem,
     ForegroundMaskBatchItem,
@@ -26,20 +26,22 @@ class InspectorBatchItem:
     image_path: str
     foreground: ForegroundMaskBatchItem
     anomaly: AnomalyCLIPBatchItem
-    classification: ClassificationBatchItem
+    anomaly_cls: ClassificationBatchItem
     segmentation: SegmentationBatchItem
+    segmentation_cls: ClassificationBatchItem
 
     @property
     def regions(self):
-        return self.anomaly.regions
+        return self.anomaly.batch_regions
 
     def visualize(self) -> np.ndarray:
         return visualize(
             image=self.image,
             foreground=self.foreground,
             anomaly=self.anomaly,
-            classification=self.classification,
+            anomaly_cls=self.anomaly_cls,
             segmentation=self.segmentation,
+            segmentation_cls=self.segmentation_cls,
             show_foreground=vis_show_cfg["foreground"],
             show_anomaly_map=vis_show_cfg["anomaly_map"],
             show_anomaly_score=vis_show_cfg["anomaly_score"],
@@ -56,9 +58,10 @@ class InspectorOutput:
     images_path: Sequence[str]
     foreground: ForegroundMaskOutput
     anomaly: AnomalyCLIPOutput
-    classification: RegionClassificationOutput
-    segmentation: RegionSegmentationOutput
-    
+    anomaly_cls: ClassificationBatchItem
+    segmentation: SegmentationOutput
+    segmentation_cls: ClassificationBatchItem
+
     def __post_init__(self):
         B = len(self.images)
 
@@ -68,11 +71,14 @@ class InspectorOutput:
         if len(self.anomaly) != B:
             raise ValueError("Anomaly batch size mismatch")
 
-        if len(self.classification) != B:
+        if len(self.anomaly_cls) != B:
             raise ValueError("Classification batch size mismatch")
 
         if len(self.segmentation) != B:
             raise ValueError("Segmentation batch size mismatch")
+
+        if len(self.segmentation_cls) != B:
+            raise ValueError("Segmentation classification batch size mismatch")
 
     def __len__(self):
         return len(self.images)
@@ -87,6 +93,7 @@ class InspectorOutput:
             image_path=self.images_path[idx],
             foreground=self.foreground[idx],
             anomaly=self.anomaly[idx],
-            classification=self.classification[idx],
+            anomaly_cls=self.anomaly_cls[idx],
             segmentation=self.segmentation[idx],
+            segmentation_cls=self.segmentation_cls[idx],
         )

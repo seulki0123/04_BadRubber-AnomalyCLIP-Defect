@@ -1,3 +1,3 @@
-from .output import RegionSegmentationOutput, SegmentationBatchItem, Segmentation
+from .output import SegmentationOutput, SegmentationBatchItem, Segmentation
 
 __all__ = []

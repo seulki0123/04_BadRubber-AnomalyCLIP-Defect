@@ -35,7 +35,7 @@ class AnomalyCLIPOutput:
         "maps",
         "score_threshold",
         "area_threshold",
-        "regions",
+        "batch_regions",
         "global_scores",
     )
 
@@ -47,10 +47,10 @@ class AnomalyCLIPOutput:
     def __post_init__(self):
         self._validate_inputs()
 
-        regions, global_scores = self._extract_regions_batch()
+        batch_regions, global_scores = self._extract_regions_batch()
 
         # create slots-only attributes here
-        object.__setattr__(self, "regions", regions)
+        object.__setattr__(self, "batch_regions", batch_regions)
         object.__setattr__(self, "global_scores", global_scores)
 
     def _validate_inputs(self):
@@ -184,13 +184,13 @@ class AnomalyCLIPOutput:
         for i in range(len(self)):
             yield AnomalyCLIPBatchItem(
                 map=self.maps[i],
-                regions=self.regions[i],
+                regions=self.batch_regions[i],
                 global_score=self.global_scores[i],
             )
 
     def __getitem__(self, idx):
         return AnomalyCLIPBatchItem(
             map=self.maps[idx],
-            regions=self.regions[idx],
+            regions=self.batch_regions[idx],
             global_score=self.global_scores[idx],
         )

@@ -9,15 +9,17 @@ def visualize(
     image: np.ndarray,
     foreground: ForegroundMaskBatchItem,
     anomaly: AnomalyCLIPBatchItem,
-    classification: ClassificationBatchItem,
+    anomaly_cls: ClassificationBatchItem,
     segmentation: SegmentationBatchItem,
+    segmentation_cls: ClassificationBatchItem,
     show_foreground: bool = True,
     show_anomaly_map: bool = True,
     show_anomaly_score: bool = True,
 ) -> np.ndarray:
 
     vis_img = image.copy()
-
+    
+    # draw foreground
     if show_foreground:
         vis_img = draw_normalized_polygons(
             image=vis_img,
@@ -26,6 +28,7 @@ def visualize(
             thickness=1,
         )
 
+    # draw anomaly map
     if show_anomaly_map:
         vis_img = draw_anomaly_map(
             image=vis_img,
@@ -33,8 +36,9 @@ def visualize(
             alpha=0.3,
         )
     
+    # draw anomaly score
     if show_anomaly_score:
-        vis_img = put_text_box(
+        vis_img = draw_text(
             image=vis_img,
             text=f"Global anomaly: {anomaly.global_score:.3f}",
             position="top_left",
@@ -42,21 +46,24 @@ def visualize(
             text_color=(255, 255, 255),
         )
 
+    # draw anomaly regions
     vis_img = draw_normalized_polygons(
         image=vis_img,
         polygons_n=[region.polygon_n for region in anomaly.regions],
-        colors=[region.color for region in classification.regions],
+        colors=[region.color for region in anomaly_cls.regions],
         thickness=1,
     )
 
+    # draw anomaly region bboxes
     vis_img = draw_bboxes_xyxyn(
         image=vis_img,
         bboxes_xyxyn=[region.bboxes_xyxy_n for region in anomaly.regions],
-        labels=[f"{region.class_name} {region.confidence:.2f}" for region in classification.regions],
-        colors=[region.color for region in classification.regions],
+        labels=[f"{region.class_name} {region.confidence:.2f}" for region in anomaly_cls.regions],
+        colors=[region.color for region in anomaly_cls.regions],
         thickness=1,
     )
     
+    # draw segmentation regions
     vis_img = draw_normalized_polygons(
         image=vis_img,
         polygons_n=[region.polygon_n for region in segmentation.regions],
@@ -64,7 +71,16 @@ def visualize(
         colors=[region.color for region in segmentation.regions],
         thickness=1,
     )
-    
+
+    # draw segmentation region bboxes
+    vis_img = draw_bboxes_xyxyn(
+        image=vis_img,
+        bboxes_xyxyn=[region.bboxes_xyxy_n for region in segmentation.regions],
+        labels=[f"{region.class_name} {region.confidence:.2f}" for region in segmentation_cls.regions],
+        colors=[region.color for region in segmentation_cls.regions],
+        thickness=1,
+    )
+
     return vis_img
 
 def draw_normalized_polygons(
@@ -73,7 +89,7 @@ def draw_normalized_polygons(
     labels: Optional[Sequence[str]] = None,
     colors: Optional[Sequence[tuple]] = None,
     thickness: int = 2,
-    font_scale: float = 0.5,
+    font_scale: float = 0.3,
     font_thickness: int = 1,
     closed: bool = True,
     alpha: float = 0.2,
@@ -116,13 +132,15 @@ def draw_normalized_polygons(
             poly_px[:, 1] *= H
             poly_px = poly_px.astype(np.int32)
 
-            draw_label(
-                vis_img,
-                str(labels[i]),
-                tuple(poly_px[0]),
-                colors[i],
-                font_scale,
-                font_thickness,
+            vis_img = draw_text(
+                image=vis_img,
+                text=str(labels[i]),
+                origin=tuple(poly_px[0]),
+                anchor_mode="bottom",
+                text_color=colors[i],
+                bg_color=None,
+                font_scale=font_scale,
+                font_thickness=font_thickness,
             )
 
     return vis_img
@@ -151,9 +169,9 @@ def draw_bboxes_xyxyn(
     image: np.ndarray,
     bboxes_xyxyn: Sequence[Sequence[float]],
     labels: Optional[Sequence[str]] = None,
-    colors: Sequence[tuple] = (0, 0, 255),
+    colors: Optional[Sequence[tuple]] = None,
     thickness: int = 2,
-    font_scale: float = 0.5,
+    font_scale: float = 0.3,
     font_thickness: int = 1,
     alpha: float = 0.2,
 ) -> np.ndarray:
@@ -161,6 +179,9 @@ def draw_bboxes_xyxyn(
     vis_img = image.copy()
     overlay = vis_img.copy()
     H, W = vis_img.shape[:2]
+    
+    if colors is None:
+        colors = [(0, 0, 255)] * len(bboxes_xyxyn)
 
     for i, box in enumerate(bboxes_xyxyn):
         x1n, y1n, x2n, y2n = box
@@ -175,7 +196,7 @@ def draw_bboxes_xyxyn(
         x2 = max(0, min(W - 1, x2))
         y2 = max(0, min(H - 1, y2))
 
-        color = colors[i] if i < len(colors) else (0, 0, 255)
+        color = colors[i]
 
         cv2.rectangle(
             overlay,
@@ -193,38 +214,41 @@ def draw_bboxes_xyxyn(
                 continue
             x1 = int(box[0] * W)
             y1 = int(box[1] * H)
+
+            color = colors[i]
             
-            draw_label(
+            vis_img = draw_text(
                 image=vis_img,
                 text=str(labels[i]),
                 origin=(x1, y1),
-                color=color,
+                anchor_mode="top",
+                text_color=color,
+                bg_color=None,
                 font_scale=font_scale,
                 font_thickness=font_thickness,
             )
 
     return vis_img
 
-def put_text_box(
+def draw_text(
     image: np.ndarray,
     text: str,
-    position: str = "top_left",
-    margin: int = 10,
-    font_scale: float = 0.6,
+    origin: Optional[tuple] = None,      # (x, y) anchor
+    position: Optional[str] = None,      # screen-based position (top_left, etc.)
+    margin: int = 0,
+    font_scale: float = 0.3,
     font_thickness: int = 1,
     text_color: tuple = (255, 255, 255),
-    bg_color: Optional[tuple] = (0, 0, 0),
+    bg_color: Optional[tuple] = None,    # None means no background
     alpha: float = 0.6,
+    anchor_mode: str = "top",            # origin-based position (top/bottom/center)
 ) -> np.ndarray:
     """
-    Draw text with background box at a predefined position.
+    Unified text drawing function.
 
-    position:
-        - top_left
-        - top_right
-        - bottom_left
-        - bottom_right
-        - center
+    Usage:
+    1) position → screen-based position
+    2) origin → specific coordinate-based
     """
 
     vis = image.copy()
@@ -240,44 +264,52 @@ def put_text_box(
     box_w = tw + 8
     box_h = th + baseline + 8
 
-    if position == "top_left":
-        x1 = margin
-        y1 = margin
+    if position is not None:
+        if position == "top_left":
+            x1 = margin
+            y1 = margin
+        elif position == "top_right":
+            x1 = W - box_w - margin
+            y1 = margin
+        elif position == "bottom_left":
+            x1 = margin
+            y1 = H - box_h - margin
+        elif position == "bottom_right":
+            x1 = W - box_w - margin
+            y1 = H - box_h - margin
+        elif position == "center":
+            x1 = (W - box_w) // 2
+            y1 = (H - box_h) // 2
+        else:
+            raise ValueError(f"Unknown position: {position}")
 
-    elif position == "top_right":
-        x1 = W - box_w - margin
-        y1 = margin
+    elif origin is not None:
+        x, y = origin
 
-    elif position == "bottom_left":
-        x1 = margin
-        y1 = H - box_h - margin
-
-    elif position == "bottom_right":
-        x1 = W - box_w - margin
-        y1 = H - box_h - margin
-
-    elif position == "center":
-        x1 = (W - box_w) // 2
-        y1 = (H - box_h) // 2
+        if anchor_mode == "top":
+            x1 = x
+            y1 = y - box_h - margin
+        elif anchor_mode == "bottom":
+            x1 = x
+            y1 = y + margin
+        elif anchor_mode == "center":
+            x1 = x - box_w // 2
+            y1 = y - box_h // 2
+        else:
+            raise ValueError(f"Unknown anchor_mode: {anchor_mode}")
 
     else:
-        raise ValueError(f"Unknown position: {position}")
+        raise ValueError("Either position or origin must be provided")
 
+    x1 = max(0, min(W - box_w, x1))
+    y1 = max(0, min(H - box_h, y1))
     x2 = x1 + box_w
     y2 = y1 + box_h
 
-    overlay = vis.copy()
-
     if bg_color is not None:
-        cv2.rectangle(
-            overlay,
-            (x1, y1),
-            (x2, y2),
-            bg_color,
-            -1,
-        )
-
-    vis = cv2.addWeighted(overlay, alpha, vis, 1 - alpha, 0)
+        overlay = vis.copy()
+        cv2.rectangle(overlay, (x1, y1), (x2, y2), bg_color, -1)
+        vis = cv2.addWeighted(overlay, alpha, vis, 1 - alpha, 0)
 
     text_x = x1 + 4
     text_y = y1 + box_h - baseline - 4
@@ -294,46 +326,3 @@ def put_text_box(
     )
 
     return vis
-
-def draw_label(
-    image: np.ndarray,
-    text: str,
-    origin: tuple,              # (x, y) pixel
-    color: tuple,
-    font_scale: float = 0.5,
-    font_thickness: int = 1,
-) -> None:
-    """
-    Draw text label only (no background box).
-    Text color = same as region color.
-    Modifies image in-place.
-    """
-
-    H, W = image.shape[:2]
-    x, y = origin
-
-    (tw, th), baseline = cv2.getTextSize(
-        text,
-        cv2.FONT_HERSHEY_SIMPLEX,
-        font_scale,
-        font_thickness,
-    )
-
-    text_y = y - 4
-
-    if text_y - th < 0:
-        text_y = y + th + 4
-
-    text_x = max(0, min(W - tw, x))
-    text_y = max(th, min(H - baseline, text_y))
-
-    cv2.putText(
-        image,
-        text,
-        (text_x, text_y),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        font_scale,
-        color,
-        font_thickness,
-        cv2.LINE_AA,
-    )

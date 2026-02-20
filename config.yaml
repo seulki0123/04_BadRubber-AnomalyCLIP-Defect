@@ -5,7 +5,7 @@ anomalyclip:
   min_area: 300
 
 classifier:
-  checkpoint: ./NAS/classify/weights/SSBR/2550H_imgsz32/weights/best.pt
+  checkpoint: ./NAS/classify/weights/BR/BR-A_1208_BR-C_1280/weights/best.pt
   imgsz: 32 # 32*1
   threshold: 0.8
 
