@@ -2,7 +2,7 @@ from typing import Sequence, Optional
 import numpy as np
 import cv2
 
-from outputs import ForegroundMaskBatchItem, AnomalyCLIPBatchItem, ClassificationBatchItem
+from outputs import ForegroundMaskBatchItem, AnomalyCLIPBatchItem, ClassificationBatchItem, SegmentationBatchItem
 
 
 def visualize(
@@ -10,6 +10,7 @@ def visualize(
     foreground: ForegroundMaskBatchItem,
     anomaly: AnomalyCLIPBatchItem,
     classification: ClassificationBatchItem,
+    segmentation: SegmentationBatchItem,
     show_foreground: bool = True,
     show_anomaly_map: bool = True,
     show_anomaly_score: bool = True,
@@ -56,6 +57,14 @@ def visualize(
         thickness=1,
     )
     
+    vis_img = draw_normalized_polygons(
+        image=vis_img,
+        polygons_n=[region.polygon_n for region in segmentation.regions],
+        labels=[f"{region.class_name} {region.confidence:.2f}" for region in segmentation.regions],
+        colors=[region.color for region in segmentation.regions],
+        thickness=1,
+    )
+    
     return vis_img
 
 def draw_normalized_polygons(
@@ -67,9 +76,11 @@ def draw_normalized_polygons(
     font_scale: float = 0.5,
     font_thickness: int = 1,
     closed: bool = True,
+    alpha: float = 0.2,
 ) -> np.ndarray:
 
     vis_img = image.copy()
+    overlay = vis_img.copy()
     H, W = vis_img.shape[:2]
 
     if colors is None:
@@ -87,21 +98,31 @@ def draw_normalized_polygons(
         poly_px = poly_px.astype(np.int32)
 
         cv2.polylines(
-            vis_img,
+            overlay,
             [poly_px],
             isClosed=closed,
             color=color,
             thickness=thickness,
         )
 
-        if labels is not None and i < len(labels):
+    vis_img = cv2.addWeighted(overlay, alpha, vis_img, 1 - alpha, 0)
+
+    if labels is not None:
+        for i, poly_n in enumerate(polygons_n):
+            if poly_n.size == 0 or i >= len(labels):
+                continue
+            poly_px = poly_n.copy()
+            poly_px[:, 0] *= W
+            poly_px[:, 1] *= H
+            poly_px = poly_px.astype(np.int32)
+
             draw_label(
-                image=vis_img,
-                text=str(labels[i]),
-                origin=tuple(poly_px[0]),   # 첫 vertex
-                color=color,
-                font_scale=font_scale,
-                font_thickness=font_thickness,
+                vis_img,
+                str(labels[i]),
+                tuple(poly_px[0]),
+                colors[i],
+                font_scale,
+                font_thickness,
             )
 
     return vis_img
@@ -134,9 +155,11 @@ def draw_bboxes_xyxyn(
     thickness: int = 2,
     font_scale: float = 0.5,
     font_thickness: int = 1,
+    alpha: float = 0.2,
 ) -> np.ndarray:
 
     vis_img = image.copy()
+    overlay = vis_img.copy()
     H, W = vis_img.shape[:2]
 
     for i, box in enumerate(bboxes_xyxyn):
@@ -155,14 +178,22 @@ def draw_bboxes_xyxyn(
         color = colors[i] if i < len(colors) else (0, 0, 255)
 
         cv2.rectangle(
-            vis_img,
+            overlay,
             (x1, y1),
             (x2, y2),
             color,
             thickness,
         )
 
-        if labels is not None and i < len(labels):
+    vis_img = cv2.addWeighted(overlay, alpha, vis_img, 1 - alpha, 0)
+
+    if labels:
+        for i, box in enumerate(bboxes_xyxyn):
+            if i >= len(labels):
+                continue
+            x1 = int(box[0] * W)
+            y1 = int(box[1] * H)
+            
             draw_label(
                 image=vis_img,
                 text=str(labels[i]),
@@ -173,7 +204,6 @@ def draw_bboxes_xyxyn(
             )
 
     return vis_img
-
 
 def put_text_box(
     image: np.ndarray,
@@ -236,7 +266,6 @@ def put_text_box(
     x2 = x1 + box_w
     y2 = y1 + box_h
 
-    # semi-transparent background
     overlay = vis.copy()
 
     if bg_color is not None:
@@ -250,7 +279,6 @@ def put_text_box(
 
     vis = cv2.addWeighted(overlay, alpha, vis, 1 - alpha, 0)
 
-    # text
     text_x = x1 + 4
     text_y = y1 + box_h - baseline - 4
 
@@ -276,8 +304,8 @@ def draw_label(
     font_thickness: int = 1,
 ) -> None:
     """
-    Draw label with colored background at given pixel position.
-    Keeps label fully inside image boundary.
+    Draw text label only (no background box).
+    Text color = same as region color.
     Modifies image in-place.
     """
 
@@ -291,35 +319,13 @@ def draw_label(
         font_thickness,
     )
 
-    # 기본적으로 위쪽에 표시
-    text_y = y - th - baseline - 4
+    text_y = y - 4
 
-    # 위로 못 올리면 아래로
-    if text_y < 0:
-        text_y = y + 4
+    if text_y - th < 0:
+        text_y = y + th + 4
 
-    box_x1 = x
-    box_y1 = text_y
-    box_x2 = x + tw + 4
-    box_y2 = text_y + th + baseline + 4
-
-    box_x1 = max(0, min(W - 1, box_x1))
-    box_y1 = max(0, min(H - 1, box_y1))
-    box_x2 = max(0, min(W - 1, box_x2))
-    box_y2 = max(0, min(H - 1, box_y2))
-
-    # 배경 박스
-    cv2.rectangle(
-        image,
-        (box_x1, box_y1),
-        (box_x2, box_y2),
-        color,
-        -1,
-    )
-
-    # 텍스트 위치 재계산
-    text_x = box_x1 + 2
-    text_y = box_y2 - baseline - 2
+    text_x = max(0, min(W - tw, x))
+    text_y = max(th, min(H - baseline, text_y))
 
     cv2.putText(
         image,
@@ -327,7 +333,7 @@ def draw_label(
         (text_x, text_y),
         cv2.FONT_HERSHEY_SIMPLEX,
         font_scale,
-        (255, 255, 255),
+        color,
         font_thickness,
         cv2.LINE_AA,
     )
