@@ -1,31 +1,32 @@
-anomalyclip:
-  checkpoint: ./checkpoints/9_12_4_mvtec_anomaly_detection+BR-A_1208+BR-C_1280/epoch_15.pth
-  imgsz: 512 # 32*12
-  threshold: 0.25
-  min_area: 0
+defect_detection:
+  anomalyclip:
+    checkpoint: ./checkpoints/anomalyclip/9_12_4_mvtec_anomaly_detection+BR-A_1208+BR-C_1280/epoch_15.pth
+    imgsz: 512 # 32*12
+    threshold: 0.25
+    min_area: 0
 
-classifier:
-  checkpoint: ./checkpoints/classify/weights/BR/BR-A_1208_BR-C_1280/weights/best.pt
-  imgsz: 32 # 32*1
-  threshold: 0.8
+  classifier:
+    checkpoint: ./checkpoints/classify/weights/BR/BR-A_1208_BR-C_1280/weights/best.pt
+    imgsz: 32 # 32*1
+    threshold: 0.8
 
-bgremover:
-  checkpoint: ./checkpoints/segment/weights/rmbg/all/weights/best.pt
-  imgsz: 160 # 32*5
+  bgremover:
+    checkpoint: ./checkpoints/segment/weights/rmbg/all/weights/best.pt
+    imgsz: 160 # 32*5
 
-segmenter:
-  checkpoint: ./checkpoints/segment/weights/yolo_seg/BR-A_1208_BR-C_1280/weights/best.pt
-  imgsz: 224 # 32*7
-  threshold: 0.0
+  segmenter:
+    checkpoint: ./checkpoints/segment/weights/yolo_seg/BR-A_1208_BR-C_1280/weights/best.pt
+    imgsz: 224 # 32*7
+    threshold: 0.0
 
-sam2:
-  checkpoint: ./checkpoints/segment/weights/sam2.1/sam2.1_hiera_tiny.pt
-  config_name: sam2.1/sam2.1_hiera_t.yaml
-  pred_iou_thresh: 0.0
-  stability_score_thresh: 0.0
-  points_per_side: 1
+  sam2:
+    checkpoint: ./checkpoints/segment/weights/sam2.1/sam2.1_hiera_tiny.pt
+    config_name: sam2.1/sam2.1_hiera_t.yaml
+    pred_iou_thresh: 0.0
+    stability_score_thresh: 0.0
+    points_per_side: 1
 
-show:
-  anomaly_map: false
-  anomaly_score: true
-  foreground: true
+  show:
+    anomaly_map: false
+    anomaly_score: true
+    foreground: true
