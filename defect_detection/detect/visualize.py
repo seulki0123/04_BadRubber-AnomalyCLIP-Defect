@@ -90,10 +90,10 @@ def draw_normalized_polygons(
     labels: Optional[Sequence[str]] = None,
     colors: Optional[Sequence[tuple]] = None,
     thickness: int = 2,
-    font_scale: float = 0.3,
+    font_scale: float = 2,
     font_thickness: int = 1,
     closed: bool = True,
-    alpha: float = 0.2,
+    alpha: float = 0.6,
 ) -> np.ndarray:
 
     vis_img = image.copy()
@@ -149,7 +149,7 @@ def draw_normalized_polygons(
 def draw_anomaly_map(
     image: np.ndarray,
     anomaly_map: np.ndarray,
-    alpha: float = 0.2,
+    alpha: float = 0.6,
 ) -> np.ndarray:
 
     amap = np.clip(anomaly_map, 0.0, 1.0)
@@ -172,9 +172,9 @@ def draw_bboxes_xyxyn(
     labels: Optional[Sequence[str]] = None,
     colors: Optional[Sequence[tuple]] = None,
     thickness: int = 2,
-    font_scale: float = 0.3,
+    font_scale: float = 2,
     font_thickness: int = 1,
-    alpha: float = 0.2,
+    alpha: float = 0.6,
 ) -> np.ndarray:
 
     vis_img = image.copy()
@@ -237,7 +237,7 @@ def draw_text(
     origin: Optional[tuple] = None,      # (x, y) anchor
     position: Optional[str] = None,      # screen-based position (top_left, etc.)
     margin: int = 0,
-    font_scale: float = 0.3,
+    font_scale: float = 2,
     font_thickness: int = 1,
     text_color: tuple = (255, 255, 255),
     bg_color: Optional[tuple] = None,    # None means no background
