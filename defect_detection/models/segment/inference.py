@@ -5,7 +5,7 @@ import tqdm
 import numpy as np
 from ultralytics import YOLO
 
-from outputs import Segmentation
+from defect_detection.outputs import Segmentation
 
 
 class Segmenter:

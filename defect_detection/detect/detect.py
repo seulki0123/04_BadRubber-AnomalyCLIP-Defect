@@ -3,13 +3,13 @@ from typing import List, Tuple
 
 import cv2
 
-from models import AnomalyCLIPInference, BackgroundRemover, Classifier, RegionClassifierAdapter, Segmenter, RegionSegmenterAdapter
-from outputs import RegionClassificationOutput, ClassificationBatchItem
-from utils import load_config, random_color
-from .result import InspectorOutput
+from defect_detection.models import AnomalyCLIPInference, BackgroundRemover, Classifier, RegionClassifierAdapter, Segmenter, RegionSegmenterAdapter
+from defect_detection.outputs import RegionClassificationOutput, ClassificationBatchItem
+from defect_detection.utils import load_config, random_color
+from .result import DetectorOutput
 from .visualize import draw_normalized_polygons
 
-class Inspector:
+class Detector:
     def __init__(self):
         config = load_config()
 
@@ -45,7 +45,7 @@ class Inspector:
     # Main API
     # ---------------------------------
 
-    def inspect(self, imgs_path: List[str]) -> InspectorOutput:
+    def detect(self, imgs_path: List[str]) -> DetectorOutput:
         t0 = time.time()
 
         images = [cv2.imread(p) for p in imgs_path]
@@ -76,7 +76,7 @@ class Inspector:
         print(f"total: {(t6-t0)*1000}ms")
         print(f"time per image: {(t6-t0)*1000/len(images)}ms")
 
-        return InspectorOutput(
+        return DetectorOutput(
             images=images,
             images_path=imgs_path,
             foreground=foreground,

@@ -1,0 +1,9 @@
+[project]
+name = "defect-detection"
+version = "0.1.0"
+description = "Defect Detection package"
+authors = [{name = "Your Name"}]
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["defect_detection*"]

@@ -5,8 +5,9 @@ import argparse
 import cv2
 import tqdm
 
-from utils import Report, save_polygons_to_yolo_format
-from rubber_inspection import Inspector, crop_regions
+from defect_detection import Detector
+from defect_detection.detect import crop_regions
+from defect_detection.utils import Report, save_polygons_to_yolo_format
 
 def batch(iterable, batch_size):
     for i in range(0, len(iterable), batch_size):
@@ -14,7 +15,7 @@ def batch(iterable, batch_size):
 
 def run(src_root, dst_root, line, grade, dates, batch_size=9):
     report = Report()
-    inspector = Inspector()
+    detector = Detector()
 
     # dates
     for date in dates:
@@ -46,7 +47,7 @@ def run(src_root, dst_root, line, grade, dates, batch_size=9):
             for file_batch in tqdm.tqdm(list(batch(files, batch_size=9)),desc=f"{date} {cam} batch inference"):
                 print("\nbatch size: ", len(file_batch))
                 img_paths = [os.path.join(cam_dir, f) for f in file_batch]
-                results = inspector.inspect(img_paths)
+                results = detector.detect(img_paths)
 
                 for result in results:
                     # result image

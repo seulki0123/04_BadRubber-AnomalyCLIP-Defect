@@ -5,7 +5,7 @@ import tqdm
 import numpy as np
 from ultralytics import YOLO
 
-from outputs.removebg.output import ForegroundMaskOutput
+from defect_detection.outputs.removebg.output import ForegroundMaskOutput
 
 
 class BackgroundRemover:

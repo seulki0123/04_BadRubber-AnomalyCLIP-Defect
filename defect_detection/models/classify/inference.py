@@ -3,7 +3,7 @@ import numpy as np
 import tqdm
 from ultralytics import YOLO
 
-from outputs import Classification
+from defect_detection.outputs import Classification
 from .classes import classes
 
 

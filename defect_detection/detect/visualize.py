@@ -2,7 +2,7 @@ from typing import Sequence, Optional
 import numpy as np
 import cv2
 
-from outputs import ForegroundMaskBatchItem, AnomalyCLIPBatchItem, ClassificationBatchItem, SegmentationBatchItem
+from defect_detection.outputs import ForegroundMaskBatchItem, AnomalyCLIPBatchItem, ClassificationBatchItem, SegmentationBatchItem
 
 
 def visualize(

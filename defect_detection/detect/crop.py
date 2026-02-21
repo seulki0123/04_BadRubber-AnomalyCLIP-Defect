@@ -2,7 +2,7 @@ import os
 from typing import Dict, Tuple, Optional, Any, List
 import numpy as np
 
-from utils import scale_bbox_xyxy_n, compute_image_hash
+from defect_detection.utils import scale_bbox_xyxy_n, compute_image_hash
 from .visualize import draw_normalized_polygons
 
 

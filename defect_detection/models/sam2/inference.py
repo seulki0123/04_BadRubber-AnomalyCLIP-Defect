@@ -5,11 +5,14 @@ import tqdm
 import torch
 import numpy as np
 
-from sam2.build_sam import build_sam2
-from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
-from outputs import SAM2Output, SAM2Region, AnomalyRegion
-from utils import mask_to_polygon, normalize_polygon, scale_bbox_xyxy_n, random_color
-from rubber_inspection.visualize import draw_normalized_polygons
+try:
+    from sam2.build_sam import build_sam2
+    from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
+except ImportError:
+    print("sam2 is not installed")
+from defect_detection.outputs import SAM2Output, SAM2Region, AnomalyRegion
+from defect_detection.utils import mask_to_polygon, normalize_polygon, scale_bbox_xyxy_n, random_color
+from defect_detection.detect.visualize import draw_normalized_polygons
 
 
 class SAM2Inference:

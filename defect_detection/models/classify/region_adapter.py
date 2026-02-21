@@ -1,9 +1,9 @@
 from typing import List, Tuple
 import numpy as np
 
-from outputs import RegionClassificationOutput, Classification
-from outputs.anomalyclip import AnomalyCLIPOutput
-from utils import scale_bbox_xyxy_n
+from defect_detection.outputs import RegionClassificationOutput, Classification
+from defect_detection.outputs.anomalyclip import AnomalyCLIPOutput
+from defect_detection.utils import scale_bbox_xyxy_n
 from .inference import Classifier
 
 

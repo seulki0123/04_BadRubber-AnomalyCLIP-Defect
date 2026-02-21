@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Sequence, Iterator
 import numpy as np
 
-from outputs import (
+from defect_detection.outputs import (
     ForegroundMaskOutput,
     AnomalyCLIPOutput,
     RegionClassificationOutput,
@@ -12,7 +12,7 @@ from outputs import (
     AnomalyCLIPBatchItem,
     ForegroundMaskBatchItem,
 )
-from utils import load_config
+from defect_detection.utils import load_config
 from .visualize import visualize
 vis_show_cfg = load_config()["show"]
 
@@ -21,7 +21,7 @@ vis_show_cfg = load_config()["show"]
 # ---------------------------------
 
 @dataclass
-class InspectorBatchItem:
+class DetectorBatchItem:
     image: np.ndarray
     image_path: str
     foreground: ForegroundMaskBatchItem
@@ -53,7 +53,7 @@ class InspectorBatchItem:
 # ---------------------------------
 
 @dataclass
-class InspectorOutput:
+class DetectorOutput:
     images: Sequence[np.ndarray]
     images_path: Sequence[str]
     foreground: ForegroundMaskOutput
@@ -83,12 +83,12 @@ class InspectorOutput:
     def __len__(self):
         return len(self.images)
 
-    def __iter__(self) -> Iterator[InspectorBatchItem]:
+    def __iter__(self) -> Iterator[DetectorBatchItem]:
         for i in range(len(self)):
             yield self[i]
 
-    def __getitem__(self, idx: int) -> InspectorBatchItem:
-        return InspectorBatchItem(
+    def __getitem__(self, idx: int) -> DetectorBatchItem:
+        return DetectorBatchItem(
             image=self.images[idx],
             image_path=self.images_path[idx],
             foreground=self.foreground[idx],

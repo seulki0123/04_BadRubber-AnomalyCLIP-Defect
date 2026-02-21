@@ -2,7 +2,7 @@ import os
 
 import cv2
 
-from rubber_inspection import Inspector
+from defect_detection import Detector
 
 if __name__ == "__main__":
     # 1. input datas
@@ -12,8 +12,8 @@ if __name__ == "__main__":
     os.makedirs(dst_dir, exist_ok=True)
 
     # 2. inspect
-    inspector = Inspector()
-    results = inspector.inspect(imgs_path)
+    detector = Detector()
+    results = detector.detect(imgs_path)
 
     # 3. visualize
     for result in results:

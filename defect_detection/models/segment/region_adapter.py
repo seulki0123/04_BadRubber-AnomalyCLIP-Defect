@@ -1,10 +1,10 @@
 from typing import List, Tuple
 import numpy as np
 
-from outputs import SegmentationOutput, Segmentation
-from outputs.anomalyclip import AnomalyCLIPOutput
-from outputs.classify import RegionClassificationOutput
-from utils import scale_bbox_xyxy_n
+from defect_detection.outputs import SegmentationOutput, Segmentation
+from defect_detection.outputs.anomalyclip import AnomalyCLIPOutput
+from defect_detection.outputs.classify import RegionClassificationOutput
+from defect_detection.utils import scale_bbox_xyxy_n
 from .inference import Segmenter
 
 
