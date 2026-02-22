@@ -15,6 +15,11 @@ def visualize(
     show_foreground: bool = True,
     show_anomaly_map: bool = True,
     show_anomaly_score: bool = True,
+    show_anomaly_regions_polygon: bool = True,
+    show_anomaly_regions_bbox: bool = True,
+    show_segmentation_regions_polygon: bool = True,
+    show_segmentation_regions_bbox: bool = True,
+    show_pass_classes: bool = True,
 ) -> np.ndarray:
 
     vis_img = image.copy()
@@ -25,7 +30,7 @@ def visualize(
             image=vis_img,
             polygons_n=foreground.polygons_n,
             colors=[(0, 255, 0) for _ in range(len(foreground.polygons_n))],
-            thickness=1,
+            thickness=5,
         )
 
     # draw anomaly map
@@ -44,43 +49,55 @@ def visualize(
             position="top_left",
             bg_color=None,
             text_color=(255, 255, 255),
+            font_scale=3,
+            font_thickness=5,
         )
 
     # draw anomaly regions
-    vis_img = draw_normalized_polygons(
-        image=vis_img,
-        polygons_n=[region.polygon_n for region in anomaly.regions],
-        colors=[region.color for region in anomaly_cls.regions],
-        thickness=1,
-    )
+    if show_anomaly_regions_polygon:
+        vis_img = draw_normalized_polygons(
+            image=vis_img,
+            polygons_n=[region.polygon_n for region in anomaly.regions],
+            colors=[region.color for region in anomaly_cls.regions],
+            is_draw=[not region.is_pass for region in anomaly_cls.regions] if show_pass_classes else None,
+            thickness=5,
+        )
 
     # draw anomaly region bboxes
-    vis_img = draw_bboxes_xyxyn(
-        image=vis_img,
-        bboxes_xyxyn=[region.bboxes_xyxy_n for region in anomaly.regions],
-        labels=[f"{region.class_name} {region.confidence:.2f}" for region in anomaly_cls.regions],
-        colors=[region.color for region in anomaly_cls.regions],
-        thickness=1,
-    )
+    if show_anomaly_regions_bbox:
+        vis_img = draw_bboxes_xyxyn(
+            image=vis_img,
+            bboxes_xyxyn=[region.bboxes_xyxy_n for region in anomaly.regions],
+            labels=[f"{region.class_name} {region.confidence:.2f}" for region in anomaly_cls.regions],
+            colors=[region.color for region in anomaly_cls.regions],
+            is_draw=[not region.is_pass for region in anomaly_cls.regions] if show_pass_classes else None,
+            thickness=5,
+            font_scale=3,
+            font_thickness=5,
+        )
     
     # draw segmentation regions
-    seg_regions = [seg for region in segmentation.regions for seg in region]
-    vis_img = draw_normalized_polygons(
-        image=vis_img,
-        polygons_n=[region.polygon_n for region in seg_regions],
-        labels=[f"{region.class_name} {region.confidence:.2f}" for region in seg_regions],
-        colors=[region.color for region in seg_regions],
-        thickness=1,
-    )
+    if show_segmentation_regions_polygon:
+        seg_regions = [seg for region in segmentation.regions for seg in region]
+        vis_img = draw_normalized_polygons(
+            image=vis_img,
+            polygons_n=[region.polygon_n for region in seg_regions],
+            labels=[f"{region.class_name} {region.confidence:.2f}" for region in seg_regions],
+            colors=[region.color for region in seg_regions],
+            thickness=5,
+            font_scale=3,
+            font_thickness=5,
+        )
 
     # draw segmentation region bboxes
-    # vis_img = draw_bboxes_xyxyn(
-    #     image=vis_img,
-    #     bboxes_xyxyn=[region.bboxes_xyxy_n for region in segmentation.regions],
-    #     labels=[f"{region.class_name} {region.confidence:.2f}" for region in segmentation_cls.regions],
-    #     colors=[region.color for region in segmentation_cls.regions],
-    #     thickness=1,
-    # )
+    # if show_segmentation_regions_bbox:
+    #     vis_img = draw_bboxes_xyxyn(
+    #         image=vis_img,
+    #         bboxes_xyxyn=[region.bboxes_xyxy_n for region in segmentation.regions],
+    #         labels=[f"{region.class_name} {region.confidence:.2f}" for region in segmentation_cls.regions],
+    #         colors=[region.color for region in segmentation_cls.regions],
+    #         thickness=5,
+    #     )
 
     return vis_img
 
@@ -89,6 +106,7 @@ def draw_normalized_polygons(
     polygons_n: Sequence[np.ndarray],
     labels: Optional[Sequence[str]] = None,
     colors: Optional[Sequence[tuple]] = None,
+    is_draw: Optional[Sequence[bool]] = None,
     thickness: int = 2,
     font_scale: float = 2,
     font_thickness: int = 1,
@@ -104,6 +122,9 @@ def draw_normalized_polygons(
         colors = [(0, 255, 0)] * len(polygons_n)
 
     for i, poly_n in enumerate(polygons_n):
+        if is_draw is not None and not is_draw[i]:
+            continue
+
         if poly_n.size == 0:
             continue
 
@@ -126,6 +147,8 @@ def draw_normalized_polygons(
 
     if labels is not None:
         for i, poly_n in enumerate(polygons_n):
+            if is_draw is not None and not is_draw[i]:
+                continue
             if poly_n.size == 0 or i >= len(labels):
                 continue
             poly_px = poly_n.copy()
@@ -171,6 +194,7 @@ def draw_bboxes_xyxyn(
     bboxes_xyxyn: Sequence[Sequence[float]],
     labels: Optional[Sequence[str]] = None,
     colors: Optional[Sequence[tuple]] = None,
+    is_draw: Optional[Sequence[bool]] = None,
     thickness: int = 2,
     font_scale: float = 2,
     font_thickness: int = 1,
@@ -185,6 +209,9 @@ def draw_bboxes_xyxyn(
         colors = [(0, 0, 255)] * len(bboxes_xyxyn)
 
     for i, box in enumerate(bboxes_xyxyn):
+        if is_draw is not None and not is_draw[i]:
+            continue
+
         x1n, y1n, x2n, y2n = box
 
         x1 = int(x1n * W)
@@ -211,6 +238,8 @@ def draw_bboxes_xyxyn(
 
     if labels:
         for i, box in enumerate(bboxes_xyxyn):
+            if is_draw is not None and not is_draw[i]:
+                continue
             if i >= len(labels):
                 continue
             x1 = int(box[0] * W)

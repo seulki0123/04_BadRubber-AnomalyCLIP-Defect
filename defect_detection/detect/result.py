@@ -45,6 +45,11 @@ class DetectorBatchItem:
             show_foreground=vis_show_cfg["foreground"],
             show_anomaly_map=vis_show_cfg["anomaly_map"],
             show_anomaly_score=vis_show_cfg["anomaly_score"],
+            show_anomaly_regions_polygon=vis_show_cfg["anomaly_regions_polygon"],
+            show_anomaly_regions_bbox=vis_show_cfg["anomaly_regions_bbox"],
+            show_segmentation_regions_polygon=vis_show_cfg["segmentation_regions_polygon"],
+            show_segmentation_regions_bbox=vis_show_cfg["segmentation_regions_bbox"],
+            show_pass_classes=vis_show_cfg["show_pass_classes"],
         )
 
 

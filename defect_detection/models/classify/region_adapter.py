@@ -56,6 +56,12 @@ class RegionClassifierAdapter:
         for b in range(len(batch_out)):
             for r in range(len(batch_out[b])):
                 if batch_out[b][r] is None:
-                    batch_out[b][r] = Classification("unknown", 0.0)
+                    batch_out[b][r] = Classification(
+                        class_id=-1,
+                        class_name="unknown",
+                        confidence=0.0,
+                        is_pass=True,
+                        color=(0, 0, 0),
+                    )
 
         return RegionClassificationOutput(batch_out)
