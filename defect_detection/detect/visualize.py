@@ -59,7 +59,7 @@ def visualize(
             image=vis_img,
             polygons_n=[region.polygon_n for region in anomaly.regions],
             colors=[region.color for region in anomaly_cls.regions],
-            is_draw=[not region.is_pass for region in anomaly_cls.regions] if show_pass_classes else None,
+            is_draw=[not region.is_pass for region in anomaly_cls.regions] if not show_pass_classes else None,
             thickness=5,
         )
 
@@ -70,7 +70,7 @@ def visualize(
             bboxes_xyxyn=[region.bboxes_xyxy_n for region in anomaly.regions],
             labels=[f"{region.class_name} {region.confidence:.2f}" for region in anomaly_cls.regions],
             colors=[region.color for region in anomaly_cls.regions],
-            is_draw=[not region.is_pass for region in anomaly_cls.regions] if show_pass_classes else None,
+            is_draw=[not region.is_pass for region in anomaly_cls.regions] if not show_pass_classes else None,
             thickness=5,
             font_scale=3,
             font_thickness=5,
